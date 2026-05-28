@@ -17,7 +17,7 @@ import os
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-__version__ = "2.6.1"
+__version__ = "2.7.0"
 
 def parse_node_id(value):
     """
@@ -87,12 +87,11 @@ def parse_netlogo_world(csv_file):
 
             elif current_section == "LINKS":
                 data = dict(zip(headers, row))
-                if 'end1' in data and 'end2' in data:
+                if 'end1' in data and 'end2' in data and 'weight' in data:
                     try:
                         u = parse_node_id(data['end1'])
                         v = parse_node_id(data['end2'])
-                        w_val = data.get('weight')
-                        weight = float(w_val) if w_val is not None else None
+                        weight = float(data['weight'])
                         edges.append((u, v, weight))
                     except ValueError:
                         # Ignore rows that aren't valid node connections
@@ -225,8 +224,8 @@ class SIRNetworkSimulator:
             if state == 1:  # Infected
                 for v, weight in self.adj[u].items():
                     if self.states[v] == 0:  # Susceptible neighbor
-                        # Determine edge spread chance: link weight, falling back to global spread_chance
-                        chance = weight if weight is not None else self.spread_chance
+                        # Determine edge spread chance: link weight
+                        chance = weight
                         if random.random() < (chance / 100.0):
                             next_states[v] = 1
 

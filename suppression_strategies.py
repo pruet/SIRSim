@@ -27,7 +27,7 @@ def register_strategy(name):
         return func
     return decorator
 
-def run_sparse_power_iteration(nodes_list, adj, spread_chance=10.0, max_iter=100, tol=1e-6):
+def run_sparse_power_iteration(nodes_list, adj, max_iter=100, tol=1e-6):
     """
     Computes the principal eigenvalue and eigenvector of the adjacency matrix
     using sparse power iteration.
@@ -45,7 +45,7 @@ def run_sparse_power_iteration(nodes_list, adj, spread_chance=10.0, max_iter=100
             for neighbor, weight in adj[node].items():
                 if neighbor in node_to_idx:
                     j = node_to_idx[neighbor]
-                    w = weight if weight is not None else spread_chance
+                    w = weight
                     u_next[i] += w * u[j]
         
         norm = np.linalg.norm(u_next)
@@ -61,12 +61,12 @@ def run_sparse_power_iteration(nodes_list, adj, spread_chance=10.0, max_iter=100
             
     return lambda_1, u, node_to_idx
 
-def run_netshield(nodes_list, adj, k, spread_chance=10.0):
+def run_netshield(nodes_list, adj, k):
     """
     Greedy NetShield immunization algorithm (Chen et al.).
     Selects k nodes to maximize the Shield-value Sv(S).
     """
-    lambda_1, u, node_to_idx = run_sparse_power_iteration(nodes_list, adj, spread_chance)
+    lambda_1, u, node_to_idx = run_sparse_power_iteration(nodes_list, adj)
     n = len(nodes_list)
     
     # Set S of selected node indices
@@ -101,7 +101,7 @@ def run_netshield(nodes_list, adj, k, spread_chance=10.0):
         for neighbor, weight in adj[node_name].items():
             if neighbor in node_to_idx:
                 j = node_to_idx[neighbor]
-                w = weight if weight is not None else spread_chance
+                w = weight
                 member_sum[j] += w * u[i_star]
             
     return [nodes_list[idx] for idx in S]
@@ -116,7 +116,7 @@ def netshield_immunization(simulator, event_type, **kwargs):
         susceptible_nodes = [who for who, state in simulator.states.items() if state == 0]
         num_to_vaccinate = int(len(susceptible_nodes) * simulator.suppression_ratio)
         if num_to_vaccinate > 0:
-            to_vaccinate = run_netshield(susceptible_nodes, simulator.adj, num_to_vaccinate, simulator.spread_chance)
+            to_vaccinate = run_netshield(susceptible_nodes, simulator.adj, num_to_vaccinate)
             for who in to_vaccinate:
                 simulator.states[who] = 2  # Immunize
 
@@ -141,8 +141,7 @@ def centrality_edge_suppression(simulator, event_type, **kwargs):
             for u_node in top_nodes:
                 for v_node in list(simulator.adj[u_node].keys()):
                     w = simulator.adj[u_node][v_node]
-                    base_chance = w if w is not None else simulator.spread_chance
-                    new_weight = base_chance * reduction_factor
+                    new_weight = w * reduction_factor
                     
                     # Update in both directions to keep the graph undirected
                     simulator.adj[u_node][v_node] = new_weight
@@ -165,8 +164,7 @@ def greedy_edge_weight_suppression(simulator, event_type, **kwargs):
                 if edge_key not in seen_edges:
                     seen_edges.add(edge_key)
                     w = simulator.adj[u][v]
-                    base_weight = w if w is not None else simulator.spread_chance
-                    edges.append((edge_key, base_weight))
+                    edges.append((edge_key, w))
                     
         # Sort edges by weight in descending order
         edges.sort(key=lambda item: item[1], reverse=True)
@@ -195,8 +193,7 @@ def reliable_cluster_edge_suppression(simulator, event_type, **kwargs):
         G = nx.Graph()
         for u in simulator.adj:
             for v, w in simulator.adj[u].items():
-                weight = w if w is not None else simulator.spread_chance
-                G.add_edge(u, v, weight=weight)
+                G.add_edge(u, v, weight=w)
                 
         # Detect communities using weighted Louvain
         try:
@@ -222,8 +219,7 @@ def reliable_cluster_edge_suppression(simulator, event_type, **kwargs):
                     v_comm = node_to_community.get(v)
                     if u_comm is not None and v_comm is not None and u_comm != v_comm:
                         w = simulator.adj[u][v]
-                        base_weight = w if w is not None else simulator.spread_chance
-                        inter_community_edges.append((edge_key, base_weight))
+                        inter_community_edges.append((edge_key, w))
                         
         # Sort bridging edges by weight in descending order
         inter_community_edges.sort(key=lambda item: item[1], reverse=True)

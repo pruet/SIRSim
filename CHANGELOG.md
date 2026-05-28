@@ -4,6 +4,13 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0] - 2026-05-28
+
+### Changed
+- **Strictly Weighted Graph Architecture**: Removed all legacy unweighted graph support, fallback code, and unweighted checks from the simulator engine (`sir_simulator.py`) and all active strategies (`suppression_strategies.py`). This establishes a highly simplified, focused, and clean codebase dedicated entirely to weighted graph simulations.
+
+---
+
 ## [2.6.1] - 2026-05-28
 
 ### Fixed
