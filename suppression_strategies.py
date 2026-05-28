@@ -90,3 +90,31 @@ def infected_quarantine(simulator, event_type, **kwargs):
                     if u in simulator.adj[v]:
                         del simulator.adj[v][u]
                 simulator.adj[u] = {}  # Disconnect completely
+
+@register_strategy("social_distancing")
+def social_distancing(simulator, event_type, **kwargs):
+    """
+    Static social distancing: reduces the spread probability (edge weight) of all links by 50% at setup.
+    """
+    if event_type == "setup":
+        for u in simulator.adj:
+            for v in simulator.adj[u]:
+                w = simulator.adj[u][v]
+                base_chance = w if w is not None else simulator.spread_chance
+                simulator.adj[u][v] = base_chance * 0.5
+
+@register_strategy("local_caution")
+def local_caution(simulator, event_type, **kwargs):
+    """
+    Dynamic local caution: dynamically reduces link weights by 80% if any neighbor is infected.
+    """
+    if event_type == "step":
+        for u in simulator.states:
+            # Only apply caution to susceptible or immune nodes
+            if simulator.states[u] != 1:
+                has_infected_neighbor = any(simulator.states[v] == 1 for v in simulator.adj[u])
+                if has_infected_neighbor:
+                    for v in simulator.adj[u]:
+                        w = simulator.adj[u][v]
+                        base_chance = w if w is not None else simulator.spread_chance
+                        simulator.adj[u][v] = base_chance * 0.2
