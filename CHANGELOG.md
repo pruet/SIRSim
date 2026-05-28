@@ -4,6 +4,13 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.1] - 2026-05-28
+
+### Fixed
+- **NetShield Edge Scale Distortion & Efficiency**: Resolved a critical scale bug where unweighted links (defaulting to `1.0` instead of `spread_chance` like `10.0`) were treated as 10 times less risky than weighted edges. Added robust key checks (`if neighbor in node_to_idx`) to support arbitrary subgraphs and constrained NetShield to run strictly on `susceptible_nodes` at setup, preventing wasted vaccination slots on already infected nodes.
+
+---
+
 ## [2.6.0] - 2026-05-28
 
 ### Added
