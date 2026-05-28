@@ -17,7 +17,7 @@ import os
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"
 
 def parse_node_id(value):
     """

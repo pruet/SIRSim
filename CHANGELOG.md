@@ -4,6 +4,14 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-05-28
+
+### Added
+- **Centrality Edge Suppression Strategy**: Added `centrality_edge_suppression` in `suppression_strategies.py`. Identifies top central nodes using eigenvector centrality and randomly scales down adjacent edge weights by a random factor in `[0.1, 0.5]` at setup.
+- **Greedy Edge-Weight Suppression Strategy**: Added `greedy_edge_weight_suppression` in `suppression_strategies.py`. Collects unique undirected links, sorts them in descending order of transmission probability, and suppresses the top fraction of highest-weight edges by 90% at setup.
+
+---
+
 ## [2.2.0] - 2026-05-28
 
 ### Added
