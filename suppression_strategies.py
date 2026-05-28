@@ -179,3 +179,59 @@ def greedy_edge_weight_suppression(simulator, event_type, **kwargs):
                 suppressed_weight = weight * 0.1
                 simulator.adj[u][v] = suppressed_weight
                 simulator.adj[v][u] = suppressed_weight
+
+@register_strategy("reliable_cluster_edge_suppression")
+def reliable_cluster_edge_suppression(simulator, event_type, **kwargs):
+    """
+    Reliable Cluster-based Edge Suppression (inspired by Pruet Boonma's "Reliable Cluster on Uncertain Multigraph" paper):
+    groups nodes into robust/reliable clusters (communities) using weighted Louvain community detection on the
+    uncertain/probabilistic link weights, then suppresses the top highest-weight inter-cluster bridging edges by 90% at setup.
+    """
+    if event_type == "setup":
+        import networkx as nx
+        
+        # Build weighted graph from simulator.adj
+        G = nx.Graph()
+        for u in simulator.adj:
+            for v, w in simulator.adj[u].items():
+                weight = w if w is not None else simulator.spread_chance
+                G.add_edge(u, v, weight=weight)
+                
+        # Detect communities using weighted Louvain
+        try:
+            communities = nx.community.louvain_communities(G, weight='weight')
+        except Exception:
+            communities = nx.community.label_propagation_communities(G)
+            
+        # Map each node to its community index
+        node_to_community = {}
+        for comm_idx, comm in enumerate(communities):
+            for node in comm:
+                node_to_community[node] = comm_idx
+                
+        # Collect all edges that link between different communities
+        inter_community_edges = []
+        seen_edges = set()
+        for u in simulator.adj:
+            for v in simulator.adj[u]:
+                edge_key = tuple(sorted((u, v)))
+                if edge_key not in seen_edges:
+                    seen_edges.add(edge_key)
+                    u_comm = node_to_community.get(u)
+                    v_comm = node_to_community.get(v)
+                    if u_comm is not None and v_comm is not None and u_comm != v_comm:
+                        w = simulator.adj[u][v]
+                        base_weight = w if w is not None else simulator.spread_chance
+                        inter_community_edges.append((edge_key, base_weight))
+                        
+        # Sort bridging edges by weight in descending order
+        inter_community_edges.sort(key=lambda item: item[1], reverse=True)
+        
+        # Suppress the top fraction of bridging edges
+        num_to_suppress = int(len(inter_community_edges) * simulator.vaccination_fraction)
+        if num_to_suppress > 0:
+            top_bridging = inter_community_edges[:num_to_suppress]
+            for (u, v), weight in top_bridging:
+                suppressed_weight = weight * 0.1
+                simulator.adj[u][v] = suppressed_weight
+                simulator.adj[v][u] = suppressed_weight

@@ -4,6 +4,13 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-05-28
+
+### Added
+- **Pruet's Reliable Cluster Edge Suppression Strategy**: Added `reliable_cluster_edge_suppression` strategy in `suppression_strategies.py`. Groups nodes into robust/reliable clusters (communities) using weighted Louvain community detection on probabilistic link weights, then suppresses the top highest-weight inter-cluster bridging edges by 90% at setup to prevent epidemic spread across communities.
+
+---
+
 ## [2.4.0] - 2026-05-28
 
 ### Changed
