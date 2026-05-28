@@ -4,6 +4,30 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-05-28
+
+### Added
+- **Decoupled Strategy Module**: Separated all suppression strategies and the decorator-based registry from `sir_simulator.py` into a dedicated, modular `suppression_strategies.py` file. This allows users to add and edit strategies independently while keeping the core simulator engine unchanged.
+
+---
+
+## [2.0.0] - 2026-05-28
+
+### Added
+- **Suppression Strategy Framework**: Overhauled the simulator with a decorator-based strategy registry (`@register_strategy`) supporting pre-simulation (`setup`) and mid-simulation (`step`) lifecycle hooks.
+- **Reference Strategies**: Implemented four suppression algorithms: Random Vaccination, High-Degree Vaccination, Acquaintance Vaccination, and Dynamic Infected Quarantine.
+- **Identical Outbreak Testing**: Pre-generates exact randomized outbreaks per Monte Carlo run to evaluate and compare all selected strategies under identical initial conditions.
+- **Comparative Summaries & Charting**: Outputs a comparative evaluation metrics table in the console and saves a multi-strategy comparative curve plot (`sir_comparison_curves.png`).
+- **Suppression Customization CLI**: Added `--vaccination-fraction` and `--quarantine-chance` arguments to configure strategy parameters dynamically.
+
+---
+
+## [1.3.0] - 2026-05-28
+
+### Added
+- **Restored Time Alignment Mechanism (Method 1)**: Brought back the original time alignment mechanism as the default averaging mode for multi-run simulations. Shorter runs that terminate early due to virus extinction are dynamically padded with their final steady state, matching the length of the longest active run.
+- **Configurable Alignment Modes**: Added the new command-line argument `-a` / `--alignment` to toggle between the restored `align` (Method 1, default) and `truncate` (Method 2) multi-run averaging strategies.
+
 ---
 
 ## [1.2.0] - 2026-05-28

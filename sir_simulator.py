@@ -6,6 +6,7 @@ Author: Antigravity
 This script parses NetLogo export-world CSV files to reconstruct network graphs,
 then runs a probabilistic SIR (Susceptible-Infected-Recovered/Resistant) simulation,
 prints step-by-step progress, and generates high-quality infection curve plots.
+Supports evaluating and comparing multiple static and dynamic suppression strategies.
 """
 
 import csv
@@ -16,7 +17,7 @@ import os
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-__version__ = "1.2.0"
+__version__ = "2.1.0"
 
 def parse_node_id(value):
     """
@@ -111,8 +112,13 @@ def parse_netlogo_world(csv_file):
 
     return globals_dict, nodes, adj
 
+# ==============================================================================
+# SUPPRESSION STRATEGIES IMPORT
+# ==============================================================================
+from suppression_strategies import SUPPRESSION_REGISTRY, register_strategy
+
 class SIRNetworkSimulator:
-    def __init__(self, nodes, adj, spread_chance, recovery_chance, resistance_chance, virus_check_frequency):
+    def __init__(self, nodes, original_adj, spread_chance, recovery_chance, resistance_chance, virus_check_frequency, vaccination_fraction=0.1, quarantine_chance=0.8):
         """
         Initializes the SIR Simulator.
         State representation:
@@ -120,11 +126,17 @@ class SIRNetworkSimulator:
           1: Infected (I)
           2: Recovered/Resistant (R)
         """
-        self.adj = adj
+        self.original_adj = original_adj
+        # Deep copy original_adj to self.adj to allow strategies to safely modify topology
+        self.adj = {u: dict(neighbors) for u, neighbors in original_adj.items()}
+        
         self.spread_chance = spread_chance             # global spread chance (0 to 100)
         self.recovery_chance = recovery_chance / 100.0 # gamma (0.0 to 1.0)
         self.resistance_chance = resistance_chance / 100.0 # rho (0.0 to 1.0)
         self.virus_check_frequency = int(virus_check_frequency)
+        self.vaccination_fraction = vaccination_fraction
+        self.quarantine_chance = quarantine_chance
+        self.strategy_func = None
 
         # Build initial state mapping & timers
         self.states = {}
@@ -162,6 +174,9 @@ class SIRNetworkSimulator:
         """
         Resets the simulator state for a new run.
         """
+        # Restore original adjacency list for a fresh start
+        self.adj = {u: dict(neighbors) for u, neighbors in self.original_adj.items()}
+        
         self.states = {who: 0 for who in self.timers} # Reset all to susceptible
         
         if initial_infected_nodes is not None:
@@ -177,6 +192,10 @@ class SIRNetworkSimulator:
         # Re-initialize timers randomly
         for who in self.timers:
             self.timers[who] = random.randint(0, self.virus_check_frequency - 1)
+
+        # Run setup hook of suppression strategy if set
+        if self.strategy_func is not None:
+            self.strategy_func(self, "setup")
 
         self.history = []
         self._record_history(0, 0)
@@ -223,6 +242,11 @@ class SIRNetworkSimulator:
                             next_states[u] = 0  # Reverts to Susceptible (SIS style)
 
         self.states = next_states
+        
+        # Run step hook of suppression strategy if set
+        if self.strategy_func is not None:
+            self.strategy_func(self, "step", tick=tick, new_infections=new_infections)
+
         self._record_history(tick, new_infections)
         return new_infections
 
@@ -279,7 +303,7 @@ def plot_simulation(history, output_path):
     # Display peak info on plot
     peak_infected = max(I)
     peak_tick = ticks[I.index(peak_infected)]
-    ax.annotate(f'Peak Infections: {peak_infected}\n(Tick {peak_tick})',
+    ax.annotate(f'Peak Infections: {peak_infected:.1f}\n(Tick {peak_tick})',
                 xy=(peak_tick, peak_infected),
                 xytext=(peak_tick + (max(ticks)*0.05), peak_infected * 0.9),
                 arrowprops=dict(facecolor='#2c3e50', arrowstyle='->', lw=1.0),
@@ -291,17 +315,95 @@ def plot_simulation(history, output_path):
     plt.close()
     print(f"\n[Visual] Premium simulation curve chart saved to: {output_path}")
 
+def plot_comparison(all_avg_histories, output_path):
+    """
+    Generates a premium comparison plot of Infected (I) curves for different strategies.
+    """
+    ticks_list = []
+    for name, history in all_avg_histories.items():
+        if history:
+            ticks_list.append(max(h['tick'] for h in history))
+    max_tick = max(ticks_list) if ticks_list else 100
+
+    plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
+    fig, ax = plt.subplots(figsize=(12, 7), dpi=150)
+
+    # Sleek modern palette
+    colors = {
+        'baseline': '#e74c3c',              # Red
+        'random_vaccination': '#f39c12',     # Orange
+        'high_degree_vaccination': '#3498db', # Blue
+        'acquaintance_vaccination': '#9b59b6',# Purple
+        'infected_quarantine': '#2ecc71'     # Green
+    }
+    # Fallback colors for other user-defined strategies
+    extra_colors = ['#1abc9c', '#34495e', '#e67e22', '#d35400', '#7f8c8d']
+
+    color_idx = 0
+    for name, history in all_avg_histories.items():
+        ticks = [h['tick'] for h in history]
+        I = [h['I'] for h in history]
+        
+        color = colors.get(name)
+        if color is None:
+            color = extra_colors[color_idx % len(extra_colors)]
+            color_idx += 1
+            
+        label_name = name.replace('_', ' ').title()
+        ax.plot(ticks, I, label=label_name, color=color, linewidth=2.5, alpha=0.9)
+        ax.fill_between(ticks, I, color=color, alpha=0.05)
+
+    ax.set_title('Epidemic Curve Comparison under Suppression Strategies', fontsize=14, fontweight='bold', pad=15, color='#2c3e50')
+    ax.set_xlabel('Ticks (Time Steps)', fontsize=11, labelpad=10, color='#34495e')
+    ax.set_ylabel('Averaged Infected Count', fontsize=11, labelpad=10, color='#34495e')
+    
+    ax.tick_params(colors='#7f8c8d', labelsize=10)
+    ax.grid(True, linestyle='--', alpha=0.5, color='#bdc3c7')
+    ax.set_xlim(0, max_tick)
+    
+    legend = ax.legend(frameon=True, facecolor='#ffffff', edgecolor='#bdc3c7', loc='upper right', fontsize=10)
+    legend.get_frame().set_linewidth(0.8)
+
+    plt.tight_layout()
+    plt.savefig(output_path, bbox_inches='tight')
+    plt.close()
+    print(f"\n[Visual] Premium comparison curve chart saved to: {output_path}")
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Run an SIR epidemic simulation on a network imported from a NetLogo export-world CSV file."
+        description="Run an SIR epidemic simulation comparing different suppression strategies on imported networks."
     )
     parser.add_argument("file", help="Path to the NetLogo export-world CSV file.")
     parser.add_argument("-s", "--spread-chance", type=float, help="Virus spread chance (0 to 100). If omitted, read from GLOBALS.")
     parser.add_argument("-r", "--recovery-chance", type=float, help="Recovery chance (0 to 100). If omitted, read from GLOBALS.")
     parser.add_argument("-g", "--resistance-chance", type=float, help="Gain resistance chance (0 to 100). If omitted, read from GLOBALS or defaults to 100 (standard SIR).")
     parser.add_argument("-t", "--steps", type=int, default=500, help="Maximum number of ticks to simulate (default: 500).")
-    parser.add_argument("-o", "--output-plot", default="sir_simulation_curves.png", help="Filename of the saved plot (default: sir_simulation_curves.png).")
+    parser.add_argument("-o", "--output-plot", help="Filename of the saved plot (default: sir_simulation_curves.png or sir_comparison_curves.png).")
     parser.add_argument("-n", "--runs", type=int, default=50, help="Number of simulation runs to average (default: 50).")
+    parser.add_argument(
+        "-a", "--alignment",
+        choices=["align", "truncate"],
+        default="align",
+        help="Time alignment mechanism for multi-run averaging: 'align' (pad early-terminated runs with final state to max length) or 'truncate' (truncate averaging at first run termination) (default: align)."
+    )
+    parser.add_argument(
+        "-S", "--strategies",
+        nargs="+",
+        default=["all"],
+        help="List of suppression strategies to evaluate. Options: 'baseline', 'random_vaccination', 'high_degree_vaccination', 'acquaintance_vaccination', 'infected_quarantine', or 'all' (default: all)."
+    )
+    parser.add_argument(
+        "--vaccination-fraction",
+        type=float,
+        default=0.10,
+        help="Fraction of nodes to vaccinate in vaccination strategies (default: 0.10)."
+    )
+    parser.add_argument(
+        "--quarantine-chance",
+        type=float,
+        default=0.80,
+        help="Probability of isolating an infected node per step in infected_quarantine (default: 0.80)."
+    )
 
     args = parser.parse_args()
 
@@ -352,13 +454,10 @@ def main():
     else:
         print(f"  * Using command-override recovery chance: {recovery_val}%")
 
-    resistance_val = args.resistance_chance
-    if resistance_val is None:
-        raw_val = globals_dict.get('gain-resistance-chance')
-        resistance_val = float(raw_val) if raw_val is not None else fallback_resistance
-        print(f"  * Using file-defined 'gain-resistance-chance': {resistance_val}%")
-    else:
-        print(f"  * Using command-override resistance chance: {resistance_val}%")
+    # Parse gain-resistance-chance
+    raw_val = globals_dict.get('gain-resistance-chance')
+    resistance_val = float(raw_val) if raw_val is not None else fallback_resistance
+    print(f"  * Using file-defined 'gain-resistance-chance': {resistance_val}%")
 
     # Parse virus-check-frequency
     raw_val = globals_dict.get('virus-check-frequency')
@@ -367,7 +466,12 @@ def main():
 
     print("=" * 60)
     
-    simulator = SIRNetworkSimulator(nodes, adj, spread_val, recovery_val, resistance_val, frequency_val)
+    # Instantiate simulator
+    simulator = SIRNetworkSimulator(
+        nodes, adj, spread_val, recovery_val, resistance_val, frequency_val,
+        vaccination_fraction=args.vaccination_fraction,
+        quarantine_chance=args.quarantine_chance
+    )
 
     # Resolve initial infected count/nodes
     initial_infected_count = sum(1 for n in nodes.values() if n['infected'])
@@ -375,60 +479,167 @@ def main():
         raw_outbreak = globals_dict.get('initial-outbreak-size')
         initial_infected_count = int(raw_outbreak) if raw_outbreak is not None else 3
 
-    # Run loop for multiple simulations
-    all_histories = []
-    
+    # Pre-generate initial outbreaks for each run to ensure fair comparisons
+    initial_outbreaks = []
+    all_node_ids = list(nodes.keys())
     for run_idx in range(args.runs):
         if args.runs == 1:
-            # For 1 run, use the exact parsed states from the CSV
             initial_nodes = [who for who, attrs in nodes.items() if attrs['infected']]
-            simulator.reset(initial_infected_nodes=initial_nodes)
+            if not initial_nodes:
+                initial_nodes = random.sample(all_node_ids, min(initial_infected_count, len(all_node_ids)))
         else:
-            # For multiple runs, randomize the initial outbreak
-            simulator.reset(initial_infected_count=initial_infected_count)
-        
-        # Run simulator until end or max_steps
-        simulator.run(args.steps)
-        all_histories.append(simulator.history)
+            initial_nodes = random.sample(all_node_ids, min(initial_infected_count, len(all_node_ids)))
+        initial_outbreaks.append(initial_nodes)
 
-    # Determine the minimum history length among all runs to truncate
-    min_length = min(len(hist) for hist in all_histories)
+    # Resolve strategies to run
+    available_strategies = ["baseline"] + list(SUPPRESSION_REGISTRY.keys())
+    selected_strategies = args.strategies
+    if "all" in selected_strategies:
+        selected_strategies = available_strategies
+    else:
+        invalid = [s for s in selected_strategies if s not in available_strategies]
+        if invalid:
+            print(f"Error: Invalid strategies: {invalid}. Available: {available_strategies}", file=sys.stderr)
+            sys.exit(1)
 
-    # Compute averaged histories up to min_length
-    avg_history = []
-    for t in range(min_length):
-        s_sum = sum(h[t]['S'] for h in all_histories)
-        i_sum = sum(h[t]['I'] for h in all_histories)
-        r_sum = sum(h[t]['R'] for h in all_histories)
-        new_inf_sum = sum(h[t]['new_infections'] for h in all_histories)
+    all_avg_histories = {}
+    summary_data = []
+
+    # Run loop for selected strategies
+    for strategy_name in selected_strategies:
+        print(f"Evaluating strategy: '{strategy_name}'...")
         
-        avg_history.append({
-            'tick': t,
-            'S': s_sum / args.runs,
-            'I': i_sum / args.runs,
-            'R': r_sum / args.runs,
-            'new_infections': new_inf_sum / args.runs
+        # Configure simulator strategy hook
+        if strategy_name == "baseline":
+            simulator.strategy_func = None
+        else:
+            simulator.strategy_func = SUPPRESSION_REGISTRY[strategy_name]
+
+        all_histories = []
+        for run_idx in range(args.runs):
+            # Reset simulator using the exact same outbreak for this run
+            simulator.reset(initial_infected_nodes=initial_outbreaks[run_idx])
+            simulator.run(args.steps)
+            all_histories.append(simulator.history)
+
+        # Average history depending on the alignment method
+        avg_history = []
+        if args.alignment == "align":
+            max_length = max(len(hist) for hist in all_histories)
+            padded_histories = []
+            for hist in all_histories:
+                padded = list(hist)
+                while len(padded) < max_length:
+                    t = len(padded)
+                    last = padded[-1]
+                    padded.append({
+                        'tick': t,
+                        'S': last['S'],
+                        'I': last['I'],
+                        'R': last['R'],
+                        'new_infections': 0.0
+                    })
+                padded_histories.append(padded)
+
+            for t in range(max_length):
+                s_sum = sum(h[t]['S'] for h in padded_histories)
+                i_sum = sum(h[t]['I'] for h in padded_histories)
+                r_sum = sum(h[t]['R'] for h in padded_histories)
+                new_inf_sum = sum(h[t]['new_infections'] for h in padded_histories)
+                
+                avg_history.append({
+                    'tick': t,
+                    'S': s_sum / args.runs,
+                    'I': i_sum / args.runs,
+                    'R': r_sum / args.runs,
+                    'new_infections': new_inf_sum / args.runs
+                })
+        else:
+            min_length = min(len(hist) for hist in all_histories)
+            for t in range(min_length):
+                s_sum = sum(h[t]['S'] for h in all_histories)
+                i_sum = sum(h[t]['I'] for h in all_histories)
+                r_sum = sum(h[t]['R'] for h in all_histories)
+                new_inf_sum = sum(h[t]['new_infections'] for h in all_histories)
+                
+                avg_history.append({
+                    'tick': t,
+                    'S': s_sum / args.runs,
+                    'I': i_sum / args.runs,
+                    'R': r_sum / args.runs,
+                    'new_infections': new_inf_sum / args.runs
+                })
+
+        all_avg_histories[strategy_name] = avg_history
+
+        # Compute summary metrics for this strategy
+        S_end = avg_history[-1]['S']
+        I_end = avg_history[-1]['I']
+        R_end = avg_history[-1]['R']
+        
+        I_vals = [h['I'] for h in avg_history]
+        peak_infected = max(I_vals)
+        peak_tick = I_vals.index(peak_infected)
+        duration = len(avg_history) - 1
+
+        summary_data.append({
+            'strategy': strategy_name,
+            'peak_infected': peak_infected,
+            'peak_infected_pct': (peak_infected / num_nodes) * 100.0 if num_nodes > 0 else 0.0,
+            'peak_tick': peak_tick,
+            'final_susceptible_pct': (S_end / num_nodes) * 100.0 if num_nodes > 0 else 0.0,
+            'final_infected_pct': (I_end / num_nodes) * 100.0 if num_nodes > 0 else 0.0,
+            'final_recovered_pct': (R_end / num_nodes) * 100.0 if num_nodes > 0 else 0.0,
+            'duration': duration,
         })
 
-    # Print averaged results in real time
-    print(f"Running SIR Simulation (averaged over {args.runs} runs, truncated to {min_length - 1} steps)...")
-    print(f"{'Tick':<6} | {'Susceptible':<12} | {'Infected':<10} | {'Recovered':<10} | {'New Infections':<14}")
-    print("-" * 60)
-    for t in range(min_length):
-        hist = avg_history[t]
-        print(f"{t:<6} | {hist['S']:<12.2f} | {hist['I']:<10.2f} | {hist['R']:<10.2f} | {hist['new_infections']:<14.2f}")
-    
-    print("-" * 60)
-    print(f"Simulation ended: Truncated at first run termination (Step {min_length - 1}).")
-    print("=" * 60)
-    
-    # Generate visualization
-    try:
-        plot_simulation(avg_history, args.output_plot)
-    except Exception as e:
-        print(f"Warning: Could not generate visualization plot: {e}", file=sys.stderr)
+    # Print step-by-step progress for 1 strategy, or summary table for multiple
+    if len(selected_strategies) == 1:
+        strat_name = selected_strategies[0]
+        avg_history = all_avg_histories[strat_name]
+        print("\n" + "=" * 60)
+        if args.alignment == "align":
+            print(f"Running SIR Simulation '{strat_name}' (averaged over {args.runs} runs, time-aligned to {len(avg_history)-1} steps)...")
+        else:
+            print(f"Running SIR Simulation '{strat_name}' (averaged over {args.runs} runs, truncated to {len(avg_history)-1} steps)...")
+        print(f"{'Tick':<6} | {'Susceptible':<12} | {'Infected':<10} | {'Recovered':<10} | {'New Infections':<14}")
+        print("-" * 60)
+        for t in range(len(avg_history)):
+            hist = avg_history[t]
+            print(f"{t:<6} | {hist['S']:<12.2f} | {hist['I']:<10.2f} | {hist['R']:<10.2f} | {hist['new_infections']:<14.2f}")
+        print("-" * 60)
+        if args.alignment == "align":
+            print(f"Simulation ended: Time-aligned to longest run duration (Step {len(avg_history)-1}).")
+        else:
+            print(f"Simulation ended: Truncated at first run termination (Step {len(avg_history)-1}).")
+        print("=" * 60)
 
-    print("Simulation Complete!")
+        # Generate single strategy curve visualization
+        output_plot_path = args.output_plot if args.output_plot is not None else "sir_simulation_curves.png"
+        try:
+            plot_simulation(avg_history, output_plot_path)
+        except Exception as e:
+            print(f"Warning: Could not generate visualization plot: {e}", file=sys.stderr)
+    else:
+        # Print comparison summary table
+        print("\n" + "=" * 112)
+        print("SUPPRESSION STRATEGY EVALUATION SUMMARY")
+        print("=" * 112)
+        print(f"{'Strategy Name':<28} | {'Peak Inf. (Qty)':<16} | {'Peak Inf. (%)':<14} | {'Peak Tick':<10} | {'Final Susc. (%)':<16} | {'Duration (Steps)':<16}")
+        print("-" * 112)
+        for row in summary_data:
+            name_str = row['strategy'].replace('_', ' ').title()
+            print(f"{name_str:<28} | {row['peak_infected']:<16.2f} | {row['peak_infected_pct']:<13.2f}% | {row['peak_tick']:<10} | {row['final_susceptible_pct']:<15.2f}% | {row['duration']:<16}")
+        print("=" * 112)
+
+        # Generate comparison visualization
+        output_plot_path = args.output_plot if args.output_plot is not None else "sir_comparison_curves.png"
+        try:
+            plot_comparison(all_avg_histories, output_plot_path)
+        except Exception as e:
+            print(f"Warning: Could not generate comparison plot: {e}", file=sys.stderr)
+
+    print("\nSimulation Complete!")
     print("=" * 60)
 
 if __name__ == "__main__":
