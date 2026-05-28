@@ -404,6 +404,10 @@ def main():
         default=0.80,
         help="Probability of isolating an infected node per step in infected_quarantine (default: 0.80)."
     )
+    parser.add_argument(
+        "-c", "--output-csv",
+        help="Filename of the saved CSV evaluation summary (default: none)."
+    )
 
     args = parser.parse_args()
 
@@ -638,6 +642,22 @@ def main():
             plot_comparison(all_avg_histories, output_plot_path)
         except Exception as e:
             print(f"Warning: Could not generate comparison plot: {e}", file=sys.stderr)
+
+    # Save evaluation summary to CSV if requested
+    if args.output_csv:
+        try:
+            with open(args.output_csv, 'w', newline='', encoding='utf-8') as csvfile:
+                fieldnames = [
+                    'strategy', 'peak_infected', 'peak_infected_pct', 'peak_tick',
+                    'final_susceptible_pct', 'final_infected_pct', 'final_recovered_pct', 'duration'
+                ]
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+                for row in summary_data:
+                    writer.writerow(row)
+            print(f"\n[Data] Evaluation summary saved to CSV: {args.output_csv}")
+        except Exception as e:
+            print(f"Warning: Could not save evaluation summary to CSV: {e}", file=sys.stderr)
 
     print("\nSimulation Complete!")
     print("=" * 60)
