@@ -17,7 +17,7 @@ import os
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-__version__ = "2.5.0"
+__version__ = "2.6.0"
 
 def parse_node_id(value):
     """
@@ -118,7 +118,7 @@ def parse_netlogo_world(csv_file):
 from suppression_strategies import SUPPRESSION_REGISTRY, register_strategy
 
 class SIRNetworkSimulator:
-    def __init__(self, nodes, original_adj, spread_chance, recovery_chance, resistance_chance, virus_check_frequency, vaccination_fraction=0.1, quarantine_chance=0.8):
+    def __init__(self, nodes, original_adj, spread_chance, recovery_chance, resistance_chance, virus_check_frequency, vaccination_fraction=0.1, quarantine_chance=0.8, suppression_ratio=None, suppression_percentage=90.0):
         """
         Initializes the SIR Simulator.
         State representation:
@@ -136,6 +136,13 @@ class SIRNetworkSimulator:
         self.virus_check_frequency = int(virus_check_frequency)
         self.vaccination_fraction = vaccination_fraction
         self.quarantine_chance = quarantine_chance
+        
+        if suppression_ratio is None:
+            self.suppression_ratio = vaccination_fraction
+        else:
+            self.suppression_ratio = suppression_ratio
+            
+        self.suppression_percentage = suppression_percentage
         self.strategy_func = None
 
         # Build initial state mapping & timers
@@ -405,6 +412,18 @@ def main():
         help="Probability of isolating an infected node per step in infected_quarantine (default: 0.80)."
     )
     parser.add_argument(
+        "--suppression-ratio",
+        type=float,
+        default=None,
+        help="Fraction of nodes/edges to suppress (default: None, which maps to --vaccination-fraction)."
+    )
+    parser.add_argument(
+        "--suppression-percentage",
+        type=float,
+        default=90.0,
+        help="Percentage of weight reduction for suppressed edges (default: 90.0, i.e., 90% reduction)."
+    )
+    parser.add_argument(
         "-c", "--output-csv",
         help="Filename of the saved CSV evaluation summary (default: none)."
     )
@@ -474,7 +493,9 @@ def main():
     simulator = SIRNetworkSimulator(
         nodes, adj, spread_val, recovery_val, resistance_val, frequency_val,
         vaccination_fraction=args.vaccination_fraction,
-        quarantine_chance=args.quarantine_chance
+        quarantine_chance=args.quarantine_chance,
+        suppression_ratio=args.suppression_ratio,
+        suppression_percentage=args.suppression_percentage
     )
 
     # Resolve initial infected count/nodes

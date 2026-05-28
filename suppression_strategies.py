@@ -111,7 +111,7 @@ def netshield_immunization(simulator, event_type, **kwargs):
     """
     if event_type == "setup":
         susceptible_nodes = [who for who, state in simulator.states.items() if state == 0]
-        num_to_vaccinate = int(len(susceptible_nodes) * simulator.vaccination_fraction)
+        num_to_vaccinate = int(len(susceptible_nodes) * simulator.suppression_ratio)
         if num_to_vaccinate > 0:
             all_nodes = list(simulator.states.keys())
             to_vaccinate = run_netshield(all_nodes, simulator.adj, num_to_vaccinate)
@@ -132,16 +132,15 @@ def centrality_edge_suppression(simulator, event_type, **kwargs):
         
         # Sort nodes by centrality u
         sorted_nodes = sorted(all_nodes, key=lambda who: u[node_to_idx[who]], reverse=True)
-        num_to_suppress = int(len(sorted_nodes) * simulator.vaccination_fraction)
+        num_to_suppress = int(len(sorted_nodes) * simulator.suppression_ratio)
         
         if num_to_suppress > 0:
             top_nodes = sorted_nodes[:num_to_suppress]
+            reduction_factor = 1.0 - (simulator.suppression_percentage / 100.0)
             for u_node in top_nodes:
                 for v_node in list(simulator.adj[u_node].keys()):
                     w = simulator.adj[u_node][v_node]
                     base_chance = w if w is not None else simulator.spread_chance
-                    # Reduce by a random factor in [0.1, 0.5]
-                    reduction_factor = random.uniform(0.1, 0.5)
                     new_weight = base_chance * reduction_factor
                     
                     # Update in both directions to keep the graph undirected
@@ -171,12 +170,13 @@ def greedy_edge_weight_suppression(simulator, event_type, **kwargs):
         # Sort edges by weight in descending order
         edges.sort(key=lambda item: item[1], reverse=True)
         
-        # Select top fraction of edges to suppress (using vaccination_fraction, e.g. 10% of edges)
-        num_to_suppress = int(len(edges) * simulator.vaccination_fraction)
+        # Select top fraction of edges to suppress (using suppression_ratio)
+        num_to_suppress = int(len(edges) * simulator.suppression_ratio)
         if num_to_suppress > 0:
             top_edges = edges[:num_to_suppress]
+            reduction_factor = 1.0 - (simulator.suppression_percentage / 100.0)
             for (u, v), weight in top_edges:
-                suppressed_weight = weight * 0.1
+                suppressed_weight = weight * reduction_factor
                 simulator.adj[u][v] = suppressed_weight
                 simulator.adj[v][u] = suppressed_weight
 
@@ -228,10 +228,11 @@ def reliable_cluster_edge_suppression(simulator, event_type, **kwargs):
         inter_community_edges.sort(key=lambda item: item[1], reverse=True)
         
         # Suppress the top fraction of bridging edges
-        num_to_suppress = int(len(inter_community_edges) * simulator.vaccination_fraction)
+        num_to_suppress = int(len(inter_community_edges) * simulator.suppression_ratio)
         if num_to_suppress > 0:
             top_bridging = inter_community_edges[:num_to_suppress]
+            reduction_factor = 1.0 - (simulator.suppression_percentage / 100.0)
             for (u, v), weight in top_bridging:
-                suppressed_weight = weight * 0.1
+                suppressed_weight = weight * reduction_factor
                 simulator.adj[u][v] = suppressed_weight
                 simulator.adj[v][u] = suppressed_weight

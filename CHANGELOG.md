@@ -4,6 +4,13 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-05-28
+
+### Added
+- **Parameterized Suppression Control**: Added `--suppression-ratio` and `--suppression-percentage` CLI arguments and simulator configurations. These allow users to dynamically control the percentage of nodes/edges targeted and the exact percentage of weight reduction (from 0% to 100%) applied across all suppression strategies instead of relying on hardcoded defaults.
+
+---
+
 ## [2.5.0] - 2026-05-28
 
 ### Added
