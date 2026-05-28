@@ -211,3 +211,64 @@ def netshield_immunization(simulator, event_type, **kwargs):
             for who in to_vaccinate:
                 if simulator.states[who] == 0:
                     simulator.states[who] = 2  # Immunize
+
+@register_strategy("centrality_edge_suppression")
+def centrality_edge_suppression(simulator, event_type, **kwargs):
+    """
+    Centrality-based edge suppression: identifies top central nodes using eigenvector centrality
+    and randomly reduces the weights of their adjacent links (by multiplying by a random factor in [0.1, 0.5]) at setup.
+    """
+    if event_type == "setup":
+        all_nodes = list(simulator.states.keys())
+        # Calculate eigenvector centrality
+        _, u, node_to_idx = run_sparse_power_iteration(all_nodes, simulator.adj)
+        
+        # Sort nodes by centrality u
+        sorted_nodes = sorted(all_nodes, key=lambda who: u[node_to_idx[who]], reverse=True)
+        num_to_suppress = int(len(sorted_nodes) * simulator.vaccination_fraction)
+        
+        if num_to_suppress > 0:
+            top_nodes = sorted_nodes[:num_to_suppress]
+            for u_node in top_nodes:
+                for v_node in list(simulator.adj[u_node].keys()):
+                    w = simulator.adj[u_node][v_node]
+                    base_chance = w if w is not None else simulator.spread_chance
+                    # Reduce by a random factor in [0.1, 0.5]
+                    reduction_factor = random.uniform(0.1, 0.5)
+                    new_weight = base_chance * reduction_factor
+                    
+                    # Update in both directions to keep the graph undirected
+                    simulator.adj[u_node][v_node] = new_weight
+                    if u_node in simulator.adj[v_node]:
+                        simulator.adj[v_node][u_node] = new_weight
+
+@register_strategy("greedy_edge_weight_suppression")
+def greedy_edge_weight_suppression(simulator, event_type, **kwargs):
+    """
+    Greedy edge weight suppression: identifies links with the highest weights
+    and suppresses them by reducing their weights by 90% at setup.
+    """
+    if event_type == "setup":
+        # Collect unique undirected edges with their weights
+        edges = []
+        seen_edges = set()
+        for u in simulator.adj:
+            for v in simulator.adj[u]:
+                edge_key = tuple(sorted((u, v)))
+                if edge_key not in seen_edges:
+                    seen_edges.add(edge_key)
+                    w = simulator.adj[u][v]
+                    base_weight = w if w is not None else simulator.spread_chance
+                    edges.append((edge_key, base_weight))
+                    
+        # Sort edges by weight in descending order
+        edges.sort(key=lambda item: item[1], reverse=True)
+        
+        # Select top fraction of edges to suppress (using vaccination_fraction, e.g. 10% of edges)
+        num_to_suppress = int(len(edges) * simulator.vaccination_fraction)
+        if num_to_suppress > 0:
+            top_edges = edges[:num_to_suppress]
+            for (u, v), weight in top_edges:
+                suppressed_weight = weight * 0.1
+                simulator.adj[u][v] = suppressed_weight
+                simulator.adj[v][u] = suppressed_weight
