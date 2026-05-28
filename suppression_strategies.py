@@ -13,6 +13,7 @@ To add your own suppression algorithm:
 """
 
 import random
+import numpy as np
 
 # Global registry of suppression strategies.
 SUPPRESSION_REGISTRY = {}
@@ -118,3 +119,95 @@ def local_caution(simulator, event_type, **kwargs):
                         w = simulator.adj[u][v]
                         base_chance = w if w is not None else simulator.spread_chance
                         simulator.adj[u][v] = base_chance * 0.2
+
+def run_sparse_power_iteration(nodes_list, adj, max_iter=100, tol=1e-6):
+    """
+    Computes the principal eigenvalue and eigenvector of the adjacency matrix
+    using sparse power iteration.
+    """
+    n = len(nodes_list)
+    node_to_idx = {node: i for i, node in enumerate(nodes_list)}
+    
+    # Initialize eigenvector with positive values
+    u = np.ones(n) / np.sqrt(n)
+    
+    lambda_1 = 0.0
+    for _ in range(max_iter):
+        u_next = np.zeros(n)
+        for i, node in enumerate(nodes_list):
+            for neighbor, weight in adj[node].items():
+                j = node_to_idx[neighbor]
+                w = weight if weight is not None else 1.0
+                u_next[i] += w * u[j]
+        
+        norm = np.linalg.norm(u_next)
+        if norm < 1e-9:
+            break
+            
+        u_next = u_next / norm
+        diff = np.linalg.norm(u_next - u)
+        u = u_next
+        lambda_1 = norm
+        if diff < tol:
+            break
+            
+    return lambda_1, u, node_to_idx
+
+def run_netshield(nodes_list, adj, k):
+    """
+    Greedy NetShield immunization algorithm (Chen et al.).
+    Selects k nodes to maximize the Shield-value Sv(S).
+    """
+    lambda_1, u, node_to_idx = run_sparse_power_iteration(nodes_list, adj)
+    n = len(nodes_list)
+    
+    # Set S of selected node indices
+    S = set()
+    
+    # member_sum[j] = sum_{i in S} A(i, j) * u[i]
+    member_sum = np.zeros(n)
+    
+    for _ in range(k):
+        best_gain = -float('inf')
+        best_node_idx = -1
+        
+        for j in range(n):
+            if j in S:
+                continue
+            
+            # Compute marginal gain: gain = 2 * lambda_1 * u(j)^2 - 2 * member_sum[j] * u(j)
+            gain = 2 * lambda_1 * (u[j] ** 2) - 2 * member_sum[j] * u[j]
+            
+            if gain > best_gain:
+                best_gain = gain
+                best_node_idx = j
+                
+        if best_node_idx == -1:
+            break
+            
+        S.add(best_node_idx)
+        
+        # Update member_sum for neighbors of newly added node
+        i_star = best_node_idx
+        node_name = nodes_list[i_star]
+        for neighbor, weight in adj[node_name].items():
+            j = node_to_idx[neighbor]
+            w = weight if weight is not None else 1.0
+            member_sum[j] += w * u[i_star]
+            
+    return [nodes_list[idx] for idx in S]
+
+@register_strategy("netshield_immunization")
+def netshield_immunization(simulator, event_type, **kwargs):
+    """
+    Static NetShield immunization: selects and immunizes k nodes using Chen's greedy NetShield algorithm.
+    """
+    if event_type == "setup":
+        susceptible_nodes = [who for who, state in simulator.states.items() if state == 0]
+        num_to_vaccinate = int(len(susceptible_nodes) * simulator.vaccination_fraction)
+        if num_to_vaccinate > 0:
+            all_nodes = list(simulator.states.keys())
+            to_vaccinate = run_netshield(all_nodes, simulator.adj, num_to_vaccinate)
+            for who in to_vaccinate:
+                if simulator.states[who] == 0:
+                    simulator.states[who] = 2  # Immunize
