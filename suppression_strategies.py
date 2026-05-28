@@ -224,8 +224,10 @@ def reliable_cluster_edge_suppression(simulator, event_type, **kwargs):
         # Sort bridging edges by weight in descending order
         inter_community_edges.sort(key=lambda item: item[1], reverse=True)
         
-        # Suppress the top fraction of bridging edges
-        num_to_suppress = int(len(inter_community_edges) * simulator.suppression_ratio)
+        # The suppression budget is calculated as a fraction of the TOTAL edges in the graph,
+        # ensuring a fair comparison with other edge suppression strategies.
+        total_edges = sum(len(neighbors) for neighbors in simulator.adj.values()) // 2
+        num_to_suppress = int(total_edges * simulator.suppression_ratio)
         if num_to_suppress > 0:
             top_bridging = inter_community_edges[:num_to_suppress]
             reduction_factor = 1.0 - (simulator.suppression_percentage / 100.0)

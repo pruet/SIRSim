@@ -4,6 +4,13 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.1] - 2026-05-28
+
+### Fixed
+- **Reliable Cluster Budget Correction**: Corrected the suppression budget calculation in the reliable cluster strategy. Previously, the budget was erroneously calculated as a fraction of *inter-cluster bridging edges only* rather than the *total edges in the graph*. Under default 10% parameters on highly modular graphs, this restriction only allowed 9 edges to be suppressed, leaving the remaining 80 inter-cluster edges completely open. Basing the budget on total edges gives a mathematically fair comparison and allows all bridging connections to be successfully isolated.
+
+---
+
 ## [2.7.0] - 2026-05-28
 
 ### Changed
