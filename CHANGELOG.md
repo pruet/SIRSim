@@ -4,6 +4,14 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-05-28
+
+### Added
+- **Chen's NetShield Immunization Strategy**: Integrated Chen's greedy spectral node immunization algorithm (`netshield_immunization`) in `suppression_strategies.py`. Uses sparse power iteration to calculate principal eigenvector centrality in $O(M)$ time and greedily maximizes Shield-value to identify critical network hubs while avoiding clustering.
+- **Edge-Weight Suppression Strategies**: Added two new strategies focusing on edge weight manipulation: `social_distancing` (static 50% link weight reduction) and `local_caution` (dynamic 80% link weight reduction for nodes adjacent to active infections).
+
+---
+
 ## [2.1.0] - 2026-05-28
 
 ### Added
