@@ -138,15 +138,19 @@ def centrality_edge_suppression(simulator, event_type, **kwargs):
         if num_to_suppress > 0:
             top_nodes = sorted_nodes[:num_to_suppress]
             reduction_factor = 1.0 - (simulator.suppression_percentage / 100.0)
+            seen_edges = set()
             for u_node in top_nodes:
                 for v_node in list(simulator.adj[u_node].keys()):
-                    w = simulator.adj[u_node][v_node]
-                    new_weight = w * reduction_factor
-                    
-                    # Update in both directions to keep the graph undirected
-                    simulator.adj[u_node][v_node] = new_weight
-                    if u_node in simulator.adj[v_node]:
-                        simulator.adj[v_node][u_node] = new_weight
+                    edge_key = tuple(sorted((u_node, v_node)))
+                    if edge_key not in seen_edges:
+                        seen_edges.add(edge_key)
+                        w = simulator.adj[u_node][v_node]
+                        new_weight = w * reduction_factor
+                        
+                        # Update in both directions to keep the graph undirected
+                        simulator.adj[u_node][v_node] = new_weight
+                        if u_node in simulator.adj[v_node]:
+                            simulator.adj[v_node][u_node] = new_weight
 
 @register_strategy("greedy_edge_weight_suppression")
 def greedy_edge_weight_suppression(simulator, event_type, **kwargs):
@@ -195,9 +199,9 @@ def reliable_cluster_edge_suppression(simulator, event_type, **kwargs):
             for v, w in simulator.adj[u].items():
                 G.add_edge(u, v, weight=w)
                 
-        # Detect communities using weighted Louvain
+        # Detect communities using weighted Louvain with a fixed seed for reproducible determinism
         try:
-            communities = nx.community.louvain_communities(G, weight='weight')
+            communities = nx.community.louvain_communities(G, weight='weight', seed=42)
         except Exception:
             communities = nx.community.label_propagation_communities(G)
             
