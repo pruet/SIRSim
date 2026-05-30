@@ -4,6 +4,14 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2026-05-30
+
+### Added
+- **Programmatic Invocation API**: Added a high-level `run_sir_simulation()` function at the module level in `sir_simulator.py`. This encapsulates all the loader, fallback parameter parsing, outbreak generation, Monte Carlo multi-run loop, time alignment, and statistics computation logic. Anyone can now easily trigger a full, comparative, multi-run network SIR simulation programmatically from another Python script in a single function call.
+- **Convenience Class Constructor**: Introduced `SIRNetworkSimulator.from_file()` classmethod to instantiate and configure the simulator class directly from a NetLogo CSV file. This enables external scripts to gain fine-grained, interactive, step-by-step control of the simulation class and its underlying state variables programmatically.
+
+---
+
 ## [2.7.1] - 2026-05-28
 
 ### Fixed

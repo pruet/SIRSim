@@ -17,7 +17,7 @@ import os
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-__version__ = "2.7.1"
+__version__ = "2.8.0"
 
 def parse_node_id(value):
     """
@@ -163,6 +163,99 @@ class SIRNetworkSimulator:
 
         self.history = []
         self._record_history(0, 0)
+
+    @classmethod
+    def from_file(
+        cls,
+        file_path,
+        strategy_name="baseline",
+        suppression_ratio=None,
+        suppression_percentage=90.0,
+        spread_chance=None,
+        recovery_chance=None,
+        resistance_chance=None,
+        virus_check_frequency=None,
+        vaccination_fraction=0.1,
+        quarantine_chance=0.8
+    ):
+        """
+        Convenience constructor to instantiate SIRNetworkSimulator directly from a NetLogo CSV file.
+        Reads parameters from the CSV's GLOBALS section if they are not explicitly overridden.
+        
+        Parameters:
+            file_path (str): Path to the NetLogo export-world CSV file.
+            strategy_name (str): Suppression strategy name (e.g. 'baseline', 'netshield_immunization', etc.).
+            suppression_ratio (float): Fraction of nodes/edges targeted (default: None, which maps to vaccination_fraction).
+            suppression_percentage (float): Weight reduction percentage for edge strategies (default: 90.0).
+            spread_chance (float): Spread chance override. If None, reads from CSV.
+            recovery_chance (float): Recovery chance override. If None, reads from CSV.
+            resistance_chance (float): Gain resistance chance override. If None, reads from CSV.
+            virus_check_frequency (int): Virus check timer frequency override. If None, reads from CSV.
+            vaccination_fraction (float): Default vaccination fraction if suppression_ratio is None (default: 0.1).
+            quarantine_chance (float): Probability of isolating an infected node per step (default: 0.8).
+            
+        Returns:
+            SIRNetworkSimulator: An instantiated, strategy-configured simulator.
+        """
+        globals_dict, nodes, adj = parse_netlogo_world(file_path)
+        
+        # Handle parameter fallbacks from CSV globals
+        fallback_spread = 10.0
+        fallback_recovery = 5.0
+        fallback_resistance = 5.0
+        fallback_frequency = 1
+        
+        if spread_chance is None:
+            raw_val = globals_dict.get('virus-spread-chance')
+            spread_val = float(raw_val) if raw_val is not None else fallback_spread
+        else:
+            spread_val = spread_chance
+            
+        if recovery_chance is None:
+            raw_val = globals_dict.get('recovery-chance')
+            recovery_val = float(raw_val) if raw_val is not None else fallback_recovery
+        else:
+            recovery_val = recovery_chance
+            
+        if resistance_chance is None:
+            raw_val = globals_dict.get('gain-resistance-chance')
+            resistance_val = float(raw_val) if raw_val is not None else fallback_resistance
+        else:
+            resistance_val = resistance_chance
+            
+        if virus_check_frequency is None:
+            raw_val = globals_dict.get('virus-check-frequency')
+            frequency_val = int(float(raw_val)) if raw_val is not None else fallback_frequency
+        else:
+            frequency_val = virus_check_frequency
+            
+        # Instantiate
+        simulator = cls(
+            nodes=nodes,
+            original_adj=adj,
+            spread_chance=spread_val,
+            recovery_chance=recovery_val,
+            resistance_chance=resistance_val,
+            virus_check_frequency=frequency_val,
+            vaccination_fraction=vaccination_fraction,
+            quarantine_chance=quarantine_chance,
+            suppression_ratio=suppression_ratio,
+            suppression_percentage=suppression_percentage
+        )
+        
+        # Configure strategy
+        if strategy_name == "baseline":
+            simulator.strategy_func = None
+        else:
+            if strategy_name not in SUPPRESSION_REGISTRY:
+                raise ValueError(f"Invalid strategy '{strategy_name}'. Available: {['baseline'] + list(SUPPRESSION_REGISTRY.keys())}")
+            simulator.strategy_func = SUPPRESSION_REGISTRY[strategy_name]
+            
+        # Run setup hook of suppression strategy if set
+        if simulator.strategy_func is not None:
+            simulator.strategy_func(simulator, "setup")
+            
+        return simulator
 
     def _record_history(self, tick, new_infections):
         counts = {0: 0, 1: 0, 2: 0}
@@ -375,6 +468,196 @@ def plot_comparison(all_avg_histories, output_path):
     plt.close()
     print(f"\n[Visual] Premium comparison curve chart saved to: {output_path}")
 
+def run_sir_simulation(
+    file_path,
+    runs=50,
+    steps=500,
+    alignment="align",
+    strategy_name="baseline",
+    suppression_ratio=None,
+    suppression_percentage=90.0,
+    spread_chance=None,
+    recovery_chance=None,
+    resistance_chance=None,
+    virus_check_frequency=None,
+    vaccination_fraction=0.10,
+    quarantine_chance=0.80
+):
+    """
+    High-level API to run a multi-run Monte Carlo SIR simulation on a NetLogo CSV graph.
+    
+    Parameters:
+        file_path (str): Path to the NetLogo export-world CSV file.
+        runs (int): Number of independent simulation runs to average (default: 50).
+        steps (int): Maximum number of ticks to simulate (default: 500).
+        alignment (str): 'align' or 'truncate' time alignment mode for averaging (default: 'align').
+        strategy_name (str): Suppression strategy name (e.g. 'baseline', 'netshield_immunization', etc.).
+        suppression_ratio (float): Fraction of nodes/edges targeted (default: None, which maps to vaccination_fraction).
+        suppression_percentage (float): Weight reduction percentage for edge strategies (default: 90.0).
+        spread_chance (float): Spread chance override. If None, reads from CSV.
+        recovery_chance (float): Recovery chance override. If None, reads from CSV.
+        resistance_chance (float): Gain resistance chance override. If None, reads from CSV.
+        virus_check_frequency (int): Virus check timer frequency override. If None, reads from CSV.
+        vaccination_fraction (float): Default vaccination fraction if suppression_ratio is None (default: 0.10).
+        quarantine_chance (float): Probability of isolating an infected node per step (default: 0.80).
+        
+    Returns:
+        tuple: (avg_history, summary_metrics)
+            - avg_history (list of dict): The step-by-step averaged history (contains tick, S, I, R, and new_infections).
+            - summary_metrics (dict): Standard evaluation metrics including peak infections, final percentages, and duration.
+    """
+    import os
+    import sys
+    
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Error: File '{file_path}' does not exist.")
+        
+    globals_dict, nodes, adj = parse_netlogo_world(file_path)
+    num_nodes = len(nodes)
+    
+    # Handle parameter fallbacks from CSV globals
+    fallback_spread = 10.0
+    fallback_recovery = 5.0
+    fallback_resistance = 5.0
+    fallback_frequency = 1
+    
+    if spread_chance is None:
+        raw_val = globals_dict.get('virus-spread-chance')
+        spread_val = float(raw_val) if raw_val is not None else fallback_spread
+    else:
+        spread_val = spread_chance
+        
+    if recovery_chance is None:
+        raw_val = globals_dict.get('recovery-chance')
+        recovery_val = float(raw_val) if raw_val is not None else fallback_recovery
+    else:
+        recovery_val = recovery_chance
+        
+    if resistance_chance is None:
+        raw_val = globals_dict.get('gain-resistance-chance')
+        resistance_val = float(raw_val) if raw_val is not None else fallback_resistance
+    else:
+        resistance_val = resistance_chance
+        
+    if virus_check_frequency is None:
+        raw_val = globals_dict.get('virus-check-frequency')
+        frequency_val = int(float(raw_val)) if raw_val is not None else fallback_frequency
+    else:
+        frequency_val = virus_check_frequency
+        
+    # Instantiate simulator
+    simulator = SIRNetworkSimulator(
+        nodes, adj, spread_val, recovery_val, resistance_val, frequency_val,
+        vaccination_fraction=vaccination_fraction,
+        quarantine_chance=quarantine_chance,
+        suppression_ratio=suppression_ratio,
+        suppression_percentage=suppression_percentage
+    )
+    
+    # Resolve initial infected outbreak size
+    initial_infected_count = sum(1 for n in nodes.values() if n['infected'])
+    if initial_infected_count == 0:
+        raw_outbreak = globals_dict.get('initial-outbreak-size')
+        initial_infected_count = int(raw_outbreak) if raw_outbreak is not None else 3
+        
+    # Pre-generate initial outbreaks to ensure identical outbreaks per run
+    initial_outbreaks = []
+    all_node_ids = list(nodes.keys())
+    for run_idx in range(runs):
+        if runs == 1:
+            initial_nodes = [who for who, attrs in nodes.items() if attrs['infected']]
+            if not initial_nodes:
+                initial_nodes = random.sample(all_node_ids, min(initial_infected_count, len(all_node_ids)))
+        else:
+            initial_nodes = random.sample(all_node_ids, min(initial_infected_count, len(all_node_ids)))
+        initial_outbreaks.append(initial_nodes)
+        
+    # Configure strategy
+    if strategy_name == "baseline":
+        simulator.strategy_func = None
+    else:
+        if strategy_name not in SUPPRESSION_REGISTRY:
+            raise ValueError(f"Invalid strategy '{strategy_name}'. Available: {['baseline'] + list(SUPPRESSION_REGISTRY.keys())}")
+        simulator.strategy_func = SUPPRESSION_REGISTRY[strategy_name]
+        
+    # Run Monte Carlo simulations
+    all_histories = []
+    for run_idx in range(runs):
+        simulator.reset(initial_infected_nodes=initial_outbreaks[run_idx])
+        simulator.run(steps)
+        all_histories.append(simulator.history)
+        
+    # Average history
+    avg_history = []
+    if alignment == "align":
+        max_length = max(len(hist) for hist in all_histories)
+        padded_histories = []
+        for hist in all_histories:
+            padded = list(hist)
+            while len(padded) < max_length:
+                t = len(padded)
+                last = padded[-1]
+                padded.append({
+                    'tick': t,
+                    'S': last['S'],
+                    'I': last['I'],
+                    'R': last['R'],
+                    'new_infections': 0.0
+                })
+            padded_histories.append(padded)
+
+        for t in range(max_length):
+            s_sum = sum(h[t]['S'] for h in padded_histories)
+            i_sum = sum(h[t]['I'] for h in padded_histories)
+            r_sum = sum(h[t]['R'] for h in padded_histories)
+            new_inf_sum = sum(h[t]['new_infections'] for h in padded_histories)
+            
+            avg_history.append({
+                'tick': t,
+                'S': s_sum / runs,
+                'I': i_sum / runs,
+                'R': r_sum / runs,
+                'new_infections': new_inf_sum / runs
+            })
+    else:
+        min_length = min(len(hist) for hist in all_histories)
+        for t in range(min_length):
+            s_sum = sum(h[t]['S'] for h in all_histories)
+            i_sum = sum(h[t]['I'] for h in all_histories)
+            r_sum = sum(h[t]['R'] for h in all_histories)
+            new_inf_sum = sum(h[t]['new_infections'] for h in all_histories)
+            
+            avg_history.append({
+                'tick': t,
+                'S': s_sum / runs,
+                'I': i_sum / runs,
+                'R': r_sum / runs,
+                'new_infections': new_inf_sum / runs
+            })
+            
+    # Compute summary metrics
+    S_end = avg_history[-1]['S']
+    I_end = avg_history[-1]['I']
+    R_end = avg_history[-1]['R']
+    
+    I_vals = [h['I'] for h in avg_history]
+    peak_infected = max(I_vals)
+    peak_tick = I_vals.index(peak_infected)
+    duration = len(avg_history) - 1
+    
+    summary = {
+        'strategy': strategy_name,
+        'peak_infected': peak_infected,
+        'peak_infected_pct': (peak_infected / num_nodes) * 100.0 if num_nodes > 0 else 0.0,
+        'peak_tick': peak_tick,
+        'final_susceptible_pct': (S_end / num_nodes) * 100.0 if num_nodes > 0 else 0.0,
+        'final_infected_pct': (I_end / num_nodes) * 100.0 if num_nodes > 0 else 0.0,
+        'final_recovered_pct': (R_end / num_nodes) * 100.0 if num_nodes > 0 else 0.0,
+        'duration': duration,
+    }
+    
+    return avg_history, summary
+
 def main():
     parser = argparse.ArgumentParser(
         description="Run an SIR epidemic simulation comparing different suppression strategies on imported networks."
@@ -453,68 +736,6 @@ def main():
     print(f"  - Initial Resistant: {initial_resistant}")
     print("-" * 60)
 
-    # Determine simulation parameters
-    # Fallbacks if GLOBALS not found or missing specific headers
-    fallback_spread = 10.0
-    fallback_recovery = 5.0
-    fallback_resistance = 5.0  # Default to 5% resistance chance (matching NetLogo setup default)
-    fallback_frequency = 1        # Default check frequency is 1
-
-    spread_val = args.spread_chance
-    if spread_val is None:
-        raw_val = globals_dict.get('virus-spread-chance')
-        spread_val = float(raw_val) if raw_val is not None else fallback_spread
-        print(f"  * Using file-defined 'virus-spread-chance': {spread_val}%")
-    else:
-        print(f"  * Using command-override spread chance: {spread_val}%")
-
-    recovery_val = args.recovery_chance
-    if recovery_val is None:
-        raw_val = globals_dict.get('recovery-chance')
-        recovery_val = float(raw_val) if raw_val is not None else fallback_recovery
-        print(f"  * Using file-defined 'recovery-chance': {recovery_val}%")
-    else:
-        print(f"  * Using command-override recovery chance: {recovery_val}%")
-
-    # Parse gain-resistance-chance
-    raw_val = globals_dict.get('gain-resistance-chance')
-    resistance_val = float(raw_val) if raw_val is not None else fallback_resistance
-    print(f"  * Using file-defined 'gain-resistance-chance': {resistance_val}%")
-
-    # Parse virus-check-frequency
-    raw_val = globals_dict.get('virus-check-frequency')
-    frequency_val = int(float(raw_val)) if raw_val is not None else fallback_frequency
-    print(f"  * Using file-defined 'virus-check-frequency': {frequency_val}")
-
-    print("=" * 60)
-    
-    # Instantiate simulator
-    simulator = SIRNetworkSimulator(
-        nodes, adj, spread_val, recovery_val, resistance_val, frequency_val,
-        vaccination_fraction=args.vaccination_fraction,
-        quarantine_chance=args.quarantine_chance,
-        suppression_ratio=args.suppression_ratio,
-        suppression_percentage=args.suppression_percentage
-    )
-
-    # Resolve initial infected count/nodes
-    initial_infected_count = sum(1 for n in nodes.values() if n['infected'])
-    if initial_infected_count == 0:
-        raw_outbreak = globals_dict.get('initial-outbreak-size')
-        initial_infected_count = int(raw_outbreak) if raw_outbreak is not None else 3
-
-    # Pre-generate initial outbreaks for each run to ensure fair comparisons
-    initial_outbreaks = []
-    all_node_ids = list(nodes.keys())
-    for run_idx in range(args.runs):
-        if args.runs == 1:
-            initial_nodes = [who for who, attrs in nodes.items() if attrs['infected']]
-            if not initial_nodes:
-                initial_nodes = random.sample(all_node_ids, min(initial_infected_count, len(all_node_ids)))
-        else:
-            initial_nodes = random.sample(all_node_ids, min(initial_infected_count, len(all_node_ids)))
-        initial_outbreaks.append(initial_nodes)
-
     # Resolve strategies to run
     available_strategies = ["baseline"] + list(SUPPRESSION_REGISTRY.keys())
     selected_strategies = args.strategies
@@ -532,90 +753,27 @@ def main():
     # Run loop for selected strategies
     for strategy_name in selected_strategies:
         print(f"Evaluating strategy: '{strategy_name}'...")
-        
-        # Configure simulator strategy hook
-        if strategy_name == "baseline":
-            simulator.strategy_func = None
-        else:
-            simulator.strategy_func = SUPPRESSION_REGISTRY[strategy_name]
-
-        all_histories = []
-        for run_idx in range(args.runs):
-            # Reset simulator using the exact same outbreak for this run
-            simulator.reset(initial_infected_nodes=initial_outbreaks[run_idx])
-            simulator.run(args.steps)
-            all_histories.append(simulator.history)
-
-        # Average history depending on the alignment method
-        avg_history = []
-        if args.alignment == "align":
-            max_length = max(len(hist) for hist in all_histories)
-            padded_histories = []
-            for hist in all_histories:
-                padded = list(hist)
-                while len(padded) < max_length:
-                    t = len(padded)
-                    last = padded[-1]
-                    padded.append({
-                        'tick': t,
-                        'S': last['S'],
-                        'I': last['I'],
-                        'R': last['R'],
-                        'new_infections': 0.0
-                    })
-                padded_histories.append(padded)
-
-            for t in range(max_length):
-                s_sum = sum(h[t]['S'] for h in padded_histories)
-                i_sum = sum(h[t]['I'] for h in padded_histories)
-                r_sum = sum(h[t]['R'] for h in padded_histories)
-                new_inf_sum = sum(h[t]['new_infections'] for h in padded_histories)
-                
-                avg_history.append({
-                    'tick': t,
-                    'S': s_sum / args.runs,
-                    'I': i_sum / args.runs,
-                    'R': r_sum / args.runs,
-                    'new_infections': new_inf_sum / args.runs
-                })
-        else:
-            min_length = min(len(hist) for hist in all_histories)
-            for t in range(min_length):
-                s_sum = sum(h[t]['S'] for h in all_histories)
-                i_sum = sum(h[t]['I'] for h in all_histories)
-                r_sum = sum(h[t]['R'] for h in all_histories)
-                new_inf_sum = sum(h[t]['new_infections'] for h in all_histories)
-                
-                avg_history.append({
-                    'tick': t,
-                    'S': s_sum / args.runs,
-                    'I': i_sum / args.runs,
-                    'R': r_sum / args.runs,
-                    'new_infections': new_inf_sum / args.runs
-                })
-
-        all_avg_histories[strategy_name] = avg_history
-
-        # Compute summary metrics for this strategy
-        S_end = avg_history[-1]['S']
-        I_end = avg_history[-1]['I']
-        R_end = avg_history[-1]['R']
-        
-        I_vals = [h['I'] for h in avg_history]
-        peak_infected = max(I_vals)
-        peak_tick = I_vals.index(peak_infected)
-        duration = len(avg_history) - 1
-
-        summary_data.append({
-            'strategy': strategy_name,
-            'peak_infected': peak_infected,
-            'peak_infected_pct': (peak_infected / num_nodes) * 100.0 if num_nodes > 0 else 0.0,
-            'peak_tick': peak_tick,
-            'final_susceptible_pct': (S_end / num_nodes) * 100.0 if num_nodes > 0 else 0.0,
-            'final_infected_pct': (I_end / num_nodes) * 100.0 if num_nodes > 0 else 0.0,
-            'final_recovered_pct': (R_end / num_nodes) * 100.0 if num_nodes > 0 else 0.0,
-            'duration': duration,
-        })
+        try:
+            avg_history, summary = run_sir_simulation(
+                file_path=args.file,
+                runs=args.runs,
+                steps=args.steps,
+                alignment=args.alignment,
+                strategy_name=strategy_name,
+                suppression_ratio=args.suppression_ratio,
+                suppression_percentage=args.suppression_percentage,
+                spread_chance=args.spread_chance,
+                recovery_chance=args.recovery_chance,
+                resistance_chance=args.resistance_chance,
+                virus_check_frequency=args.virus_check_frequency,
+                vaccination_fraction=args.vaccination_fraction,
+                quarantine_chance=args.quarantine_chance
+            )
+            all_avg_histories[strategy_name] = avg_history
+            summary_data.append(summary)
+        except Exception as e:
+            print(f"Error executing strategy '{strategy_name}': {e}", file=sys.stderr)
+            sys.exit(1)
 
     # Print step-by-step progress for 1 strategy, or summary table for multiple
     if len(selected_strategies) == 1:
