@@ -17,7 +17,7 @@ import os
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-__version__ = "2.8.1"
+__version__ = "2.9.0"
 
 def parse_node_id(value):
     """
@@ -176,7 +176,8 @@ class SIRNetworkSimulator:
         resistance_chance=None,
         virus_check_frequency=None,
         vaccination_fraction=0.1,
-        quarantine_chance=0.8
+        quarantine_chance=0.8,
+        initial_outbreak_size=None
     ):
         """
         Convenience constructor to instantiate SIRNetworkSimulator directly from a NetLogo CSV file.
@@ -193,6 +194,7 @@ class SIRNetworkSimulator:
             virus_check_frequency (int): Virus check timer frequency override. If None, reads from CSV.
             vaccination_fraction (float): Default vaccination fraction if suppression_ratio is None (default: 0.1).
             quarantine_chance (float): Probability of isolating an infected node per step (default: 0.8).
+            initial_outbreak_size (int): Override for the initial infected outbreak size.
             
         Returns:
             SIRNetworkSimulator: An instantiated, strategy-configured simulator.
@@ -251,9 +253,13 @@ class SIRNetworkSimulator:
                 raise ValueError(f"Invalid strategy '{strategy_name}'. Available: {['baseline'] + list(SUPPRESSION_REGISTRY.keys())}")
             simulator.strategy_func = SUPPRESSION_REGISTRY[strategy_name]
             
-        # Run setup hook of suppression strategy if set
-        if simulator.strategy_func is not None:
-            simulator.strategy_func(simulator, "setup")
+        # Apply initial outbreak override if provided (which runs the strategy setup)
+        if initial_outbreak_size is not None:
+            simulator.reset(initial_infected_count=initial_outbreak_size)
+        else:
+            # Run setup hook of suppression strategy if set
+            if simulator.strategy_func is not None:
+                simulator.strategy_func(simulator, "setup")
             
         return simulator
 
@@ -481,7 +487,8 @@ def run_sir_simulation(
     resistance_chance=None,
     virus_check_frequency=None,
     vaccination_fraction=0.10,
-    quarantine_chance=0.80
+    quarantine_chance=0.80,
+    initial_outbreak_size=None
 ):
     """
     High-level API to run a multi-run Monte Carlo SIR simulation on a NetLogo CSV graph.
@@ -500,6 +507,7 @@ def run_sir_simulation(
         virus_check_frequency (int): Virus check timer frequency override. If None, reads from CSV.
         vaccination_fraction (float): Default vaccination fraction if suppression_ratio is None (default: 0.10).
         quarantine_chance (float): Probability of isolating an infected node per step (default: 0.80).
+        initial_outbreak_size (int): Override for the initial infected outbreak size. If None, reads from CSV.
         
     Returns:
         tuple: (avg_history, summary_metrics)
@@ -555,16 +563,19 @@ def run_sir_simulation(
     )
     
     # Resolve initial infected outbreak size
-    initial_infected_count = sum(1 for n in nodes.values() if n['infected'])
-    if initial_infected_count == 0:
-        raw_outbreak = globals_dict.get('initial-outbreak-size')
-        initial_infected_count = int(raw_outbreak) if raw_outbreak is not None else 3
+    if initial_outbreak_size is not None:
+        initial_infected_count = initial_outbreak_size
+    else:
+        initial_infected_count = sum(1 for n in nodes.values() if n['infected'])
+        if initial_infected_count == 0:
+            raw_outbreak = globals_dict.get('initial-outbreak-size')
+            initial_infected_count = int(raw_outbreak) if raw_outbreak is not None else 3
         
     # Pre-generate initial outbreaks to ensure identical outbreaks per run
     initial_outbreaks = []
     all_node_ids = list(nodes.keys())
     for run_idx in range(runs):
-        if runs == 1:
+        if runs == 1 and initial_outbreak_size is None:
             initial_nodes = [who for who, attrs in nodes.items() if attrs['infected']]
             if not initial_nodes:
                 initial_nodes = random.sample(all_node_ids, min(initial_infected_count, len(all_node_ids)))
@@ -670,6 +681,7 @@ def main():
     parser.add_argument("-t", "--steps", type=int, default=500, help="Maximum number of ticks to simulate (default: 500).")
     parser.add_argument("-o", "--output-plot", help="Filename of the saved plot (default: sir_simulation_curves.png or sir_comparison_curves.png).")
     parser.add_argument("-n", "--runs", type=int, default=50, help="Number of simulation runs to average (default: 50).")
+    parser.add_argument("-i", "--initial-outbreak-size", type=int, help="Initial number of infected nodes (outbreak size). If omitted, read from GLOBALS or uses turtles in CSV.")
     parser.add_argument(
         "-a", "--alignment",
         choices=["align", "truncate"],
@@ -768,7 +780,8 @@ def main():
                 resistance_chance=args.resistance_chance,
                 virus_check_frequency=args.virus_check_frequency,
                 vaccination_fraction=args.vaccination_fraction,
-                quarantine_chance=args.quarantine_chance
+                quarantine_chance=args.quarantine_chance,
+                initial_outbreak_size=args.initial_outbreak_size
             )
             all_avg_histories[strategy_name] = avg_history
             summary_data.append(summary)
