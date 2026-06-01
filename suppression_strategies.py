@@ -106,19 +106,31 @@ def run_netshield(nodes_list, adj, k):
             
     return [nodes_list[idx] for idx in S]
 
-@register_strategy("netshield_immunization")
-def netshield_immunization(simulator, event_type, **kwargs):
+@register_strategy("netshield_edge_suppression")
+def netshield_edge_suppression(simulator, event_type, **kwargs):
     """
-    Static NetShield immunization: selects and immunizes k nodes using Chen's greedy NetShield algorithm.
-    Only non-infected (susceptible) nodes are considered for immunization to avoid wasted slots.
+    NetShield-based Edge Suppression: selects top k nodes using Chen's greedy NetShield algorithm,
+    then suppresses all edges incident to those nodes by the standard suppression percentage.
     """
     if event_type == "setup":
-        susceptible_nodes = [who for who, state in simulator.states.items() if state == 0]
-        num_to_vaccinate = int(len(susceptible_nodes) * simulator.suppression_ratio)
-        if num_to_vaccinate > 0:
-            to_vaccinate = run_netshield(susceptible_nodes, simulator.adj, num_to_vaccinate)
-            for who in to_vaccinate:
-                simulator.states[who] = 2  # Immunize
+        all_nodes = list(simulator.states.keys())
+        num_to_suppress = int(len(all_nodes) * simulator.suppression_ratio)
+        if num_to_suppress > 0:
+            top_nodes = run_netshield(all_nodes, simulator.adj, num_to_suppress)
+            reduction_factor = 1.0 - (simulator.suppression_percentage / 100.0)
+            seen_edges = set()
+            for u_node in top_nodes:
+                for v_node in list(simulator.adj[u_node].keys()):
+                    edge_key = tuple(sorted((u_node, v_node)))
+                    if edge_key not in seen_edges:
+                        seen_edges.add(edge_key)
+                        w = simulator.adj[u_node][v_node]
+                        new_weight = w * reduction_factor
+                        
+                        # Update in both directions to keep the graph undirected
+                        simulator.adj[u_node][v_node] = new_weight
+                        if u_node in simulator.adj[v_node]:
+                            simulator.adj[v_node][u_node] = new_weight
 
 @register_strategy("centrality_edge_suppression")
 def centrality_edge_suppression(simulator, event_type, **kwargs):

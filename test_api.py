@@ -12,7 +12,7 @@ def main():
         file_path="vone_300_6_3.csv",
         runs=3,
         steps=100,
-        strategy_name="netshield_immunization",
+        strategy_name="netshield_edge_suppression",
         suppression_ratio=0.15,
         suppression_percentage=80.0
     )

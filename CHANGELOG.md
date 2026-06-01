@@ -4,6 +4,13 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.10.0] - 2026-06-01
+
+### Changed
+- **Fair NetShield Edge Suppression**: Converted the legacy node-based `netshield_immunization` strategy into an edge-based `netshield_edge_suppression` strategy. It now uses the same greedy NetShield node selection algorithm, but suppresses all edges incident to those selected central nodes by the standard suppression percentage. This allows for a completely fair comparative analysis against other edge-based suppression strategies.
+
+---
+
 ## [2.9.0] - 2026-06-01
 
 ### Added

@@ -7,7 +7,7 @@ Author: Antigravity
 import sys
 import networkx as nx
 from sir_simulator import parse_netlogo_world, SIRNetworkSimulator
-from suppression_strategies import SUPPRESSION_REGISTRY, run_sparse_power_iteration
+from suppression_strategies import SUPPRESSION_REGISTRY, run_sparse_power_iteration, run_netshield
 
 def run_verification(file_path):
     print("=" * 70)
@@ -60,17 +60,37 @@ def run_verification(file_path):
                         assert sim.adj[v][u] == w, f"Asymmetry detected for edge ({u}, {v}): {w} vs {sim.adj[v][u]}"
                 
                 # Strategy-specific checks
-                if strategy_name == "netshield_immunization":
-                    # Count immunized nodes
-                    immunized = [who for who, state in sim.states.items() if state == 2]
-                    expected_count = int((len(all_nodes) - len(initial_infected)) * ratio)
+                if strategy_name == "netshield_edge_suppression":
+                    # NetShield strategy suppresses edges of top nodes
+                    expected_nodes_count = int(len(all_nodes) * ratio)
+                    reduction_factor = 1.0 - (pct / 100.0)
                     
-                    print(f"  [Ratio: {ratio:.2f}, Pct: {pct:.1f}%] Immunized nodes count: {len(immunized)} (Expected: {expected_count})")
-                    assert len(immunized) == expected_count, f"NetShield count mismatch: {len(immunized)} != {expected_count}"
+                    # Reconstruct top central nodes via netshield
+                    top_nodes = set(run_netshield(all_nodes, sim.original_adj, expected_nodes_count))
                     
-                    # Verify no immunized node is infected
-                    for who in immunized:
-                        assert who not in initial_infected, f"Infected node {who} was immunized!"
+                    # Check that only edges incident on top_nodes are modified
+                    modified_edges = []
+                    seen = set()
+                    for u_node in sim.adj:
+                        for v_node, w in sim.adj[u_node].items():
+                            edge = tuple(sorted((u_node, v_node)))
+                            if edge not in seen:
+                                seen.add(edge)
+                                orig = sim.original_adj[u_node][v_node]
+                                if abs(orig - w) > 1e-5:
+                                    expected_weight = orig * reduction_factor
+                                    assert abs(w - expected_weight) < 1e-5, f"Scaling factor mismatch: {w} vs {expected_weight}"
+                                    assert u_node in top_nodes or v_node in top_nodes, f"Edge {edge} modified but neither endpoint is a NetShield node!"
+                                    modified_edges.append(edge)
+                                    
+                    # Check that all adjacent edges of top_nodes are indeed modified
+                    expected_adjacent_edges = set()
+                    for u_node in top_nodes:
+                        for v_node in sim.original_adj[u_node]:
+                            expected_adjacent_edges.add(tuple(sorted((u_node, v_node))))
+                            
+                    print(f"  [Ratio: {ratio:.2f}, Pct: {pct:.1f}%] Modified NetShield edges count: {len(modified_edges)} (Expected: {len(expected_adjacent_edges)})")
+                    assert len(modified_edges) == len(expected_adjacent_edges), f"NetShield edges mismatch: {len(modified_edges)} != {len(expected_adjacent_edges)}"
                         
                 elif strategy_name == "centrality_edge_suppression":
                     # Centrality strategy suppresses edges of top nodes

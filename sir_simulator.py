@@ -17,7 +17,7 @@ import os
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-__version__ = "2.9.0"
+__version__ = "2.10.0"
 
 def parse_node_id(value):
     """
@@ -185,7 +185,7 @@ class SIRNetworkSimulator:
         
         Parameters:
             file_path (str): Path to the NetLogo export-world CSV file.
-            strategy_name (str): Suppression strategy name (e.g. 'baseline', 'netshield_immunization', etc.).
+            strategy_name (str): Suppression strategy name (e.g. 'baseline', 'netshield_edge_suppression', etc.).
             suppression_ratio (float): Fraction of nodes/edges targeted (default: None, which maps to vaccination_fraction).
             suppression_percentage (float): Weight reduction percentage for edge strategies (default: 90.0).
             spread_chance (float): Spread chance override. If None, reads from CSV.
@@ -498,7 +498,7 @@ def run_sir_simulation(
         runs (int): Number of independent simulation runs to average (default: 50).
         steps (int): Maximum number of ticks to simulate (default: 500).
         alignment (str): 'align' or 'truncate' time alignment mode for averaging (default: 'align').
-        strategy_name (str): Suppression strategy name (e.g. 'baseline', 'netshield_immunization', etc.).
+        strategy_name (str): Suppression strategy name (e.g. 'baseline', 'netshield_edge_suppression', etc.).
         suppression_ratio (float): Fraction of nodes/edges targeted (default: None, which maps to vaccination_fraction).
         suppression_percentage (float): Weight reduction percentage for edge strategies (default: 90.0).
         spread_chance (float): Spread chance override. If None, reads from CSV.
