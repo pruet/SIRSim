@@ -298,7 +298,6 @@ class SirSimulatorGUI:
         # Dynamic strategy note/explanation
         self.lbl_strategy_note = ttk.Label(frame_sel, text="", foreground="#4b5563", font=("Helvetica", 9, "italic"), wraplength=260, background="#ffffff")
         self.lbl_strategy_note.pack(fill=tk.X)
-        self.on_strategy_selected() # Trigger init explanation
         
         # Suppression parameters
         self.frame_suppression = ttk.LabelFrame(self.tab_strategies, text="2. Strategy Parameters", padding=10)
@@ -341,6 +340,7 @@ class SirSimulatorGUI:
         self.slider_q.pack(fill=tk.X)
         
         self.toggle_ratio_field()
+        self.on_strategy_selected() # Trigger init explanation after all widgets are defined
 
     def build_tab_execution(self):
         """Builds Ticks, Runs, Time Alignment and Concurrency controls Tab."""
