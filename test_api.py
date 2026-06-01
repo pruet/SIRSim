@@ -14,7 +14,8 @@ def main():
         steps=100,
         strategy_name="netshield_edge_suppression",
         suppression_ratio=0.15,
-        suppression_percentage=80.0
+        suppression_percentage=80.0,
+        parallel=True
     )
     print("\n[SUCCESS] Functional API executed programmatically! Summary returned:")
     for k, v in summary.items():

@@ -4,6 +4,13 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.0] - 2026-06-01
+
+### Added
+- **Multi-Process Parallel Execution**: Implemented high-performance process-based parallel execution (`ProcessPoolExecutor`) in `run_sir_simulation()` to distribute independent Monte Carlo runs across all available CPU cores. Users can now enable parallel execution using the new `-j` / `--parallel` command-line flag or `parallel=True` programmatically, yielding substantial multi-fold execution speedups on massive network graphs.
+
+---
+
 ## [2.11.0] - 2026-06-01
 
 ### Added

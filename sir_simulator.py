@@ -17,7 +17,7 @@ import os
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-__version__ = "2.11.0"
+__version__ = "2.12.0"
 
 def parse_node_id(value):
     """
@@ -115,6 +115,49 @@ def parse_netlogo_world(csv_file):
 # SUPPRESSION STRATEGIES IMPORT
 # ==============================================================================
 from suppression_strategies import SUPPRESSION_REGISTRY, register_strategy
+
+def run_single_mc_run(
+    nodes,
+    adj,
+    spread_val,
+    recovery_val,
+    resistance_val,
+    frequency_val,
+    vaccination_fraction,
+    quarantine_chance,
+    suppression_ratio,
+    suppression_percentage,
+    strategy_name,
+    steps,
+    initial_infected_nodes
+):
+    """
+    Worker function to run a single independent Monte Carlo SIR simulation.
+    Executed in parallel processes.
+    """
+    from suppression_strategies import SUPPRESSION_REGISTRY
+    
+    sim = SIRNetworkSimulator(
+        nodes=nodes,
+        original_adj=adj,
+        spread_chance=spread_val,
+        recovery_chance=recovery_val,
+        resistance_chance=resistance_val,
+        virus_check_frequency=frequency_val,
+        vaccination_fraction=vaccination_fraction,
+        quarantine_chance=quarantine_chance,
+        suppression_ratio=suppression_ratio,
+        suppression_percentage=suppression_percentage
+    )
+    
+    if strategy_name == "baseline":
+        sim.strategy_func = None
+    else:
+        sim.strategy_func = SUPPRESSION_REGISTRY[strategy_name]
+        
+    sim.reset(initial_infected_nodes=initial_infected_nodes)
+    sim.run(steps)
+    return sim.history
 
 class SIRNetworkSimulator:
     def __init__(self, nodes, original_adj, spread_chance, recovery_chance, resistance_chance, virus_check_frequency, vaccination_fraction=0.1, quarantine_chance=0.8, suppression_ratio=None, suppression_percentage=90.0):
@@ -488,7 +531,8 @@ def run_sir_simulation(
     virus_check_frequency=None,
     vaccination_fraction=0.10,
     quarantine_chance=0.80,
-    initial_outbreak_size=None
+    initial_outbreak_size=None,
+    parallel=False
 ):
     """
     High-level API to run a multi-run Monte Carlo SIR simulation on a NetLogo CSV graph.
@@ -508,6 +552,7 @@ def run_sir_simulation(
         vaccination_fraction (float): Default vaccination fraction if suppression_ratio is None (default: 0.10).
         quarantine_chance (float): Probability of isolating an infected node per step (default: 0.80).
         initial_outbreak_size (int): Override for the initial infected outbreak size. If None, reads from CSV.
+        parallel (bool): Enable multi-core parallel execution of Monte Carlo runs (default: False).
         
     Returns:
         tuple: (avg_history, summary_metrics)
@@ -596,11 +641,37 @@ def run_sir_simulation(
     start_time = time.perf_counter()
     
     all_histories = []
-    for run_idx in range(runs):
-        simulator.reset(initial_infected_nodes=initial_outbreaks[run_idx])
-        simulator.run(steps)
-        all_histories.append(simulator.history)
-        
+    if parallel:
+        from concurrent.futures import ProcessPoolExecutor
+        futures = []
+        with ProcessPoolExecutor() as executor:
+            for run_idx in range(runs):
+                futures.append(
+                    executor.submit(
+                        run_single_mc_run,
+                        nodes,
+                        adj,
+                        spread_val,
+                        recovery_val,
+                        resistance_val,
+                        frequency_val,
+                        vaccination_fraction,
+                        quarantine_chance,
+                        suppression_ratio,
+                        suppression_percentage,
+                        strategy_name,
+                        steps,
+                        initial_outbreaks[run_idx]
+                    )
+                )
+            for fut in futures:
+                all_histories.append(fut.result())
+    else:
+        for run_idx in range(runs):
+            simulator.reset(initial_infected_nodes=initial_outbreaks[run_idx])
+            simulator.run(steps)
+            all_histories.append(simulator.history)
+            
     execution_time = time.perf_counter() - start_time
         
     # Average history
@@ -688,6 +759,7 @@ def main():
     parser.add_argument("-o", "--output-plot", help="Filename of the saved plot (default: sir_simulation_curves.png or sir_comparison_curves.png).")
     parser.add_argument("-n", "--runs", type=int, default=50, help="Number of simulation runs to average (default: 50).")
     parser.add_argument("-i", "--initial-outbreak-size", type=int, help="Initial number of infected nodes (outbreak size). If omitted, read from GLOBALS or uses turtles in CSV.")
+    parser.add_argument("-j", "--parallel", action="store_true", help="Enable multi-core parallel execution of Monte Carlo runs.")
     parser.add_argument(
         "-a", "--alignment",
         choices=["align", "truncate"],
@@ -787,7 +859,8 @@ def main():
                 virus_check_frequency=args.virus_check_frequency,
                 vaccination_fraction=args.vaccination_fraction,
                 quarantine_chance=args.quarantine_chance,
-                initial_outbreak_size=args.initial_outbreak_size
+                initial_outbreak_size=args.initial_outbreak_size,
+                parallel=args.parallel
             )
             all_avg_histories[strategy_name] = avg_history
             summary_data.append(summary)
