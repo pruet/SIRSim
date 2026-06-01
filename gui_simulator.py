@@ -82,39 +82,39 @@ class SirSimulatorGUI:
         self.root.configure(bg="#f8fafc") # slate-50
         
         # Configure frames
-        self.style.configure(".", background="#f8fafc", font=("Helvetica", 10))
+        self.style.configure(".", background="#f8fafc", font=("Helvetica", 15))
         self.style.configure("Card.TFrame", background="#ffffff", relief="flat")
         self.style.configure("Header.TFrame", background="#0f172a") # slate-900
         
         # Configure Labels
-        self.style.configure("HeaderTitle.TLabel", background="#0f172a", foreground="#ffffff", font=("Helvetica", 16, "bold"))
-        self.style.configure("HeaderSub.TLabel", background="#0f172a", foreground="#94a3b8", font=("Helvetica", 10, "italic"))
-        self.style.configure("Title.TLabel", font=("Helvetica", 12, "bold"), foreground="#0f172a", background="#ffffff")
-        self.style.configure("TabLabel.TLabel", font=("Helvetica", 10, "bold"), foreground="#475569")
+        self.style.configure("HeaderTitle.TLabel", background="#0f172a", foreground="#ffffff", font=("Helvetica", 24, "bold"))
+        self.style.configure("HeaderSub.TLabel", background="#0f172a", foreground="#94a3b8", font=("Helvetica", 15, "italic"))
+        self.style.configure("Title.TLabel", font=("Helvetica", 18, "bold"), foreground="#0f172a", background="#ffffff")
+        self.style.configure("TabLabel.TLabel", font=("Helvetica", 15, "bold"), foreground="#475569")
         
         # Configure Notebooks (Tabs)
         self.style.configure("TNotebook", background="#f8fafc", borderwidth=0)
-        self.style.configure("TNotebook.Tab", background="#e2e8f0", foreground="#475569", padding=[12, 5], font=("Helvetica", 9, "bold"))
+        self.style.configure("TNotebook.Tab", background="#e2e8f0", foreground="#475569", padding=[18, 8], font=("Helvetica", 14, "bold"))
         self.style.map("TNotebook.Tab",
             background=[("selected", "#ffffff"), ("active", "#cbd5e1")],
             foreground=[("selected", "#2563eb")] # Primary blue on selected
         )
         
         # Configure Buttons
-        self.style.configure("Primary.TButton", font=("Helvetica", 10, "bold"), background="#2563eb", foreground="#ffffff")
+        self.style.configure("Primary.TButton", font=("Helvetica", 15, "bold"), background="#2563eb", foreground="#ffffff")
         self.style.map("Primary.TButton",
             background=[("active", "#1d4ed8"), ("disabled", "#cbd5e1")]
         )
-        self.style.configure("Secondary.TButton", font=("Helvetica", 9, "bold"), background="#e2e8f0", foreground="#334155")
+        self.style.configure("Secondary.TButton", font=("Helvetica", 14, "bold"), background="#e2e8f0", foreground="#334155")
         
         # LabelFrames
         self.style.configure("TLabelframe", background="#ffffff", relief="solid", borderwidth=1, bordercolor="#e2e8f0")
-        self.style.configure("TLabelframe.Label", background="#ffffff", font=("Helvetica", 9, "bold"), foreground="#1e293b")
+        self.style.configure("TLabelframe.Label", background="#ffffff", font=("Helvetica", 14, "bold"), foreground="#1e293b")
         
         # Scale (Slider) and Entry
         self.style.configure("Horizontal.TScale", background="#ffffff")
-        self.style.configure("TCheckbutton", background="#ffffff", font=("Helvetica", 9))
-        self.style.configure("TRadiobutton", background="#ffffff", font=("Helvetica", 9))
+        self.style.configure("TCheckbutton", background="#ffffff", font=("Helvetica", 14))
+        self.style.configure("TRadiobutton", background="#ffffff", font=("Helvetica", 14))
 
     def create_widgets(self):
         """Creates and layouts GUI components."""
@@ -189,7 +189,7 @@ class SirSimulatorGUI:
         bottom_bar.pack(fill=tk.X, side=tk.BOTTOM, padx=12, pady=[0, 10])
         
         # Status Indicator
-        status_lbl_desc = ttk.Label(bottom_bar, text="Status: ", font=("Helvetica", 10, "bold"), background="#ffffff")
+        status_lbl_desc = ttk.Label(bottom_bar, text="Status: ", font=("Helvetica", 15, "bold"), background="#ffffff")
         status_lbl_desc.pack(side=tk.LEFT)
         status_lbl = ttk.Label(bottom_bar, textvariable=self.status_var, background="#ffffff", foreground="#475569")
         status_lbl.pack(side=tk.LEFT)
@@ -198,12 +198,12 @@ class SirSimulatorGUI:
         self.btn_run = tk.Button(
             bottom_bar, text="Run Simulation", command=self.start_simulation_thread,
             bg="#2563eb", fg="#ffffff", activebackground="#1d4ed8", activeforeground="#ffffff",
-            font=("Helvetica", 10, "bold"), relief="flat", padx=20, pady=6, cursor="hand2"
+            font=("Helvetica", 15, "bold"), relief="flat", padx=30, pady=9, cursor="hand2"
         )
         self.btn_run.pack(side=tk.RIGHT)
         
         # Network graph brief label in bottom bar
-        self.lbl_graph_brief = ttk.Label(bottom_bar, text="No graph loaded", background="#ffffff", foreground="#64748b", font=("Helvetica", 9, "italic"))
+        self.lbl_graph_brief = ttk.Label(bottom_bar, text="No graph loaded", background="#ffffff", foreground="#64748b", font=("Helvetica", 14, "italic"))
         self.lbl_graph_brief.pack(side=tk.RIGHT, padx=20)
 
     # ==================== PARAMETER TABS BUILDERS ====================
@@ -215,7 +215,7 @@ class SirSimulatorGUI:
         frame_file.pack(fill=tk.X, pady=[0, 12])
         
         # Selected File Path Label
-        lbl_file = ttk.Label(frame_file, textvariable=self.selected_file_path, font=("Courier", 8), foreground="#475569", background="#ffffff")
+        lbl_file = ttk.Label(frame_file, textvariable=self.selected_file_path, font=("Courier", 12), foreground="#475569", background="#ffffff")
         lbl_file.pack(fill=tk.X, side=tk.LEFT, expand=True, padx=[0, 8])
         
         btn_browse = ttk.Button(frame_file, text="Select Graph CSV", command=self.browse_file, style="Secondary.TButton")
@@ -296,7 +296,7 @@ class SirSimulatorGUI:
         self.combo_strategy.bind("<<ComboboxSelected>>", self.on_strategy_selected)
         
         # Dynamic strategy note/explanation
-        self.lbl_strategy_note = ttk.Label(frame_sel, text="", foreground="#4b5563", font=("Helvetica", 9, "italic"), wraplength=260, background="#ffffff")
+        self.lbl_strategy_note = ttk.Label(frame_sel, text="", foreground="#4b5563", font=("Helvetica", 14, "italic"), wraplength=380, background="#ffffff")
         self.lbl_strategy_note.pack(fill=tk.X)
         
         # Suppression parameters
@@ -372,7 +372,7 @@ class SirSimulatorGUI:
         frame_parallel = ttk.LabelFrame(self.tab_execution, text="2. Multi-Core Concurrency Control", padding=10)
         frame_parallel.pack(fill=tk.BOTH, expand=True)
         
-        ttk.Label(frame_parallel, text="Maximize multi-run throughput using ProcessPoolExecutor.", background="#ffffff", font=("Helvetica", 9, "italic"), foreground="#475569").pack(anchor=tk.W, pady=[0, 8])
+        ttk.Label(frame_parallel, text="Maximize multi-run throughput using ProcessPoolExecutor.", background="#ffffff", font=("Helvetica", 14, "italic"), foreground="#475569").pack(anchor=tk.W, pady=[0, 8])
         
         self.parallel_var = tk.BooleanVar(value=True)
         chk_parallel = ttk.Checkbutton(
@@ -412,12 +412,12 @@ class SirSimulatorGUI:
         self.canvas_chart.pack(fill=tk.BOTH, expand=True)
         
         # Frame inside canvas to center the image
-        self.lbl_chart_img = tk.Label(self.canvas_chart, text="No curves generated yet.\nConfigure parameters and click 'Run Simulation' below.", font=("Helvetica", 11, "italic"), bg="#f8fafc", fg="#64748b")
+        self.lbl_chart_img = tk.Label(self.canvas_chart, text="No curves generated yet.\nConfigure parameters and click 'Run Simulation' below.", font=("Helvetica", 17, "italic"), bg="#f8fafc", fg="#64748b")
         self.lbl_chart_img.pack(fill=tk.BOTH, expand=True)
 
     def build_tab_metrics(self):
         """Builds Statistics Table Tab."""
-        ttk.Label(self.tab_metrics, text="Evaluation metrics from strategy runs:", background="#ffffff", font=("Helvetica", 10, "bold"), foreground="#0f172a").pack(anchor=tk.W, pady=[0, 8])
+        ttk.Label(self.tab_metrics, text="Evaluation metrics from strategy runs:", background="#ffffff", font=("Helvetica", 15, "bold"), foreground="#0f172a").pack(anchor=tk.W, pady=[0, 8])
         
         # Treeview Scrollbar
         scroll_y = ttk.Scrollbar(self.tab_metrics, orient=tk.VERTICAL)
@@ -462,7 +462,7 @@ class SirSimulatorGUI:
         """Builds Live Monospaced Output Logs Console Tab."""
         frame_top = ttk.Frame(self.tab_console, style="Card.TFrame")
         frame_top.pack(fill=tk.X, pady=[2, 4])
-        ttk.Label(frame_top, text="Live Simulator Standard Output Console:", background="#ffffff", font=("Helvetica", 9, "bold")).pack(side=tk.LEFT)
+        ttk.Label(frame_top, text="Live Simulator Standard Output Console:", background="#ffffff", font=("Helvetica", 14, "bold")).pack(side=tk.LEFT)
         
         btn_clear_log = ttk.Button(frame_top, text="Clear Logs", command=self.clear_console, style="Secondary.TButton")
         btn_clear_log.pack(side=tk.RIGHT)
@@ -472,7 +472,7 @@ class SirSimulatorGUI:
         scroll.pack(side=tk.RIGHT, fill=tk.Y)
         
         self.console_text = tk.Text(
-            self.tab_console, wrap=tk.WORD, font=("Courier", 9),
+            self.tab_console, wrap=tk.WORD, font=("Courier", 14),
             bg="#0f172a", fg="#f8fafc", # Dark terminal colors
             insertbackground="#ffffff", yscrollcommand=scroll.set,
             state="disabled", borderwidth=0
