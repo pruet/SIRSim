@@ -4,6 +4,13 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.15.0] - 2026-06-01
+
+### Added
+- **Tkinter Desktop GUI Front-End**: Created a premium, responsive, and completely dependency-free desktop graphical user interface (`gui_simulator.py`) using Python's native `tkinter` and `ttk`. Features include organized parameter tabs, asynchronous simulation execution in a background thread to prevent interface freezing, thread-safe stdout/stderr console redirection, a tabular metrics viewer, and dynamic visual integration of generated outbreak curve charts directly inside the GUI.
+
+---
+
 ## [2.14.0] - 2026-06-01
 
 ### Added
