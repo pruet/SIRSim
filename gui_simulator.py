@@ -234,32 +234,36 @@ class SirSimulatorGUI:
         chk_override.pack(anchor=tk.W, pady=[0, 10])
         
         # Spread Chance
-        lbl_s = ttk.Label(frame_epidemic, text="Spread Chance (%):", background="#ffffff")
-        lbl_s.pack(anchor=tk.W)
-        self.slider_s = ttk.Scale(frame_epidemic, from_=0, to=100, orient=tk.HORIZONTAL, style="Horizontal.TScale")
-        self.slider_s.set(10.0)
-        self.slider_s.pack(fill=tk.X, pady=[0, 8])
+        frame_s = ttk.Frame(frame_epidemic, style="Card.TFrame")
+        frame_s.pack(fill=tk.X, pady=[0, 8])
+        ttk.Label(frame_s, text="Spread Chance (%):", background="#ffffff").pack(side=tk.LEFT, anchor=tk.W)
+        self.spin_s = ttk.Spinbox(frame_s, from_=0.0, to=100.0, increment=1.0, width=8, format="%.1f")
+        self.spin_s.set(10.0)
+        self.spin_s.pack(side=tk.RIGHT)
         
         # Recovery Chance
-        lbl_r = ttk.Label(frame_epidemic, text="Recovery Chance (%):", background="#ffffff")
-        lbl_r.pack(anchor=tk.W)
-        self.slider_r = ttk.Scale(frame_epidemic, from_=0, to=100, orient=tk.HORIZONTAL, style="Horizontal.TScale")
-        self.slider_r.set(5.0)
-        self.slider_r.pack(fill=tk.X, pady=[0, 8])
+        frame_r = ttk.Frame(frame_epidemic, style="Card.TFrame")
+        frame_r.pack(fill=tk.X, pady=[0, 8])
+        ttk.Label(frame_r, text="Recovery Chance (%):", background="#ffffff").pack(side=tk.LEFT, anchor=tk.W)
+        self.spin_r = ttk.Spinbox(frame_r, from_=0.0, to=100.0, increment=1.0, width=8, format="%.1f")
+        self.spin_r.set(5.0)
+        self.spin_r.pack(side=tk.RIGHT)
         
         # Resistance Chance
-        lbl_g = ttk.Label(frame_epidemic, text="Gain Resistance Chance (%):", background="#ffffff")
-        lbl_g.pack(anchor=tk.W)
-        self.slider_g = ttk.Scale(frame_epidemic, from_=0, to=100, orient=tk.HORIZONTAL, style="Horizontal.TScale")
-        self.slider_g.set(5.0)
-        self.slider_g.pack(fill=tk.X, pady=[0, 8])
+        frame_g = ttk.Frame(frame_epidemic, style="Card.TFrame")
+        frame_g.pack(fill=tk.X, pady=[0, 8])
+        ttk.Label(frame_g, text="Gain Resistance Chance (%):", background="#ffffff").pack(side=tk.LEFT, anchor=tk.W)
+        self.spin_g = ttk.Spinbox(frame_g, from_=0.0, to=100.0, increment=1.0, width=8, format="%.1f")
+        self.spin_g.set(5.0)
+        self.spin_g.pack(side=tk.RIGHT)
         
         # Virus Check Frequency
-        lbl_f = ttk.Label(frame_epidemic, text="Virus Check Frequency (ticks):", background="#ffffff")
-        lbl_f.pack(anchor=tk.W)
-        self.spin_f = ttk.Spinbox(frame_epidemic, from_=1, to=50, width=5)
+        frame_f = ttk.Frame(frame_epidemic, style="Card.TFrame")
+        frame_f.pack(fill=tk.X, pady=[0, 12])
+        ttk.Label(frame_f, text="Virus Check Frequency (ticks):", background="#ffffff").pack(side=tk.LEFT, anchor=tk.W)
+        self.spin_f = ttk.Spinbox(frame_f, from_=1, to=100, increment=1, width=8)
         self.spin_f.set(1)
-        self.spin_f.pack(anchor=tk.W, pady=[0, 12])
+        self.spin_f.pack(side=tk.RIGHT)
         
         # Initial outbreak size frame
         frame_outbreak = ttk.LabelFrame(self.tab_network, text="3. Seed Outbreak Configuration", padding=8)
@@ -304,40 +308,48 @@ class SirSimulatorGUI:
         self.frame_suppression.pack(fill=tk.BOTH, expand=True)
         
         # Suppression Ratio (p)
-        lbl_p_desc = ttk.Label(self.frame_suppression, text="Suppression Ratio (targeted nodes/edges fraction):", background="#ffffff")
-        lbl_p_desc.pack(anchor=tk.W)
-        
+        frame_ratio_chk = ttk.Frame(self.frame_suppression, style="Card.TFrame")
+        frame_ratio_chk.pack(fill=tk.X, pady=[0, 4])
         self.override_ratio = tk.BooleanVar(value=False)
         self.chk_ratio = ttk.Checkbutton(
-            self.frame_suppression, text="Override Ratio (default maps to vaccination fraction)",
+            frame_ratio_chk, text="Override Suppression Ratio",
             variable=self.override_ratio, command=self.toggle_ratio_field
         )
-        self.chk_ratio.pack(anchor=tk.W, pady=[2, 4])
+        self.chk_ratio.pack(side=tk.LEFT)
         
-        self.slider_p = ttk.Scale(self.frame_suppression, from_=0.0, to=1.0, orient=tk.HORIZONTAL, style="Horizontal.TScale")
-        self.slider_p.set(0.10)
-        self.slider_p.pack(fill=tk.X, pady=[0, 10])
+        frame_p = ttk.Frame(self.frame_suppression, style="Card.TFrame")
+        frame_p.pack(fill=tk.X, pady=[0, 10])
+        ttk.Label(frame_p, text="Suppression Ratio:", background="#ffffff").pack(side=tk.LEFT, anchor=tk.W)
+        self.spin_p = ttk.Spinbox(frame_p, from_=0.0, to=1.0, increment=0.01, width=8, format="%.2f")
+        self.spin_p.set(0.10)
+        self.spin_p.pack(side=tk.RIGHT)
         
         # Suppression Percentage (P)
-        self.lbl_P = ttk.Label(self.frame_suppression, text="Suppression Intensity (edge weight reduction %):", background="#ffffff")
-        self.lbl_P.pack(anchor=tk.W)
-        self.slider_P = ttk.Scale(self.frame_suppression, from_=0, to=100, orient=tk.HORIZONTAL, style="Horizontal.TScale")
-        self.slider_P.set(90.0)
-        self.slider_P.pack(fill=tk.X, pady=[0, 10])
+        frame_P = ttk.Frame(self.frame_suppression, style="Card.TFrame")
+        frame_P.pack(fill=tk.X, pady=[0, 10])
+        self.lbl_P = ttk.Label(frame_P, text="Suppression Intensity (%):", background="#ffffff")
+        self.lbl_P.pack(side=tk.LEFT, anchor=tk.W)
+        self.spin_P = ttk.Spinbox(frame_P, from_=0.0, to=100.0, increment=1.0, width=8, format="%.1f")
+        self.spin_P.set(90.0)
+        self.spin_P.pack(side=tk.RIGHT)
         
         # Vaccination Fraction (v)
-        self.lbl_v = ttk.Label(self.frame_suppression, text="Vaccination Fraction (nodes baseline immunization %):", background="#ffffff")
-        self.lbl_v.pack(anchor=tk.W)
-        self.slider_v = ttk.Scale(self.frame_suppression, from_=0.0, to=1.0, orient=tk.HORIZONTAL, style="Horizontal.TScale")
-        self.slider_v.set(0.10)
-        self.slider_v.pack(fill=tk.X, pady=[0, 10])
+        frame_v = ttk.Frame(self.frame_suppression, style="Card.TFrame")
+        frame_v.pack(fill=tk.X, pady=[0, 10])
+        self.lbl_v = ttk.Label(frame_v, text="Vaccination Fraction:", background="#ffffff")
+        self.lbl_v.pack(side=tk.LEFT, anchor=tk.W)
+        self.spin_v = ttk.Spinbox(frame_v, from_=0.0, to=1.0, increment=0.01, width=8, format="%.2f")
+        self.spin_v.set(0.10)
+        self.spin_v.pack(side=tk.RIGHT)
         
         # Quarantine Chance (q)
-        self.lbl_q = ttk.Label(self.frame_suppression, text="Quarantine Success Probability (per infected check):", background="#ffffff")
-        self.lbl_q.pack(anchor=tk.W)
-        self.slider_q = ttk.Scale(self.frame_suppression, from_=0.0, to=1.0, orient=tk.HORIZONTAL, style="Horizontal.TScale")
-        self.slider_q.set(0.80)
-        self.slider_q.pack(fill=tk.X)
+        frame_q = ttk.Frame(self.frame_suppression, style="Card.TFrame")
+        frame_q.pack(fill=tk.X, pady=[0, 10])
+        self.lbl_q = ttk.Label(frame_q, text="Quarantine Success Prob.:", background="#ffffff")
+        self.lbl_q.pack(side=tk.LEFT, anchor=tk.W)
+        self.spin_q = ttk.Spinbox(frame_q, from_=0.0, to=1.0, increment=0.01, width=8, format="%.2f")
+        self.spin_q.set(0.80)
+        self.spin_q.pack(side=tk.RIGHT)
         
         self.toggle_ratio_field()
         self.on_strategy_selected() # Trigger init explanation after all widgets are defined
@@ -519,11 +531,11 @@ class SirSimulatorGUI:
             self.log_to_console("stderr", f"Error pre-parsing graph CSV: {e}")
             
     def toggle_disease_fields(self):
-        """Enables/Disables disease sliders based on checkbox state."""
+        """Enables/Disables disease inputs based on checkbox state."""
         state = "normal" if self.override_disease.get() else "disabled"
-        self.slider_s.config(state=state)
-        self.slider_r.config(state=state)
-        self.slider_g.config(state=state)
+        self.spin_s.config(state=state)
+        self.spin_r.config(state=state)
+        self.spin_g.config(state=state)
         self.spin_f.config(state=state)
         
     def toggle_outbreak_field(self):
@@ -532,9 +544,9 @@ class SirSimulatorGUI:
         self.spin_outbreak.config(state=state)
         
     def toggle_ratio_field(self):
-        """Enables/Disables suppression ratio slider."""
+        """Enables/Disables suppression ratio input."""
         state = "normal" if self.override_ratio.get() else "disabled"
-        self.slider_p.config(state=state)
+        self.spin_p.config(state=state)
         
     def toggle_parallel_fields(self):
         """Enables/Disables multi-process related options based on checkbox state."""
@@ -579,10 +591,10 @@ class SirSimulatorGUI:
     def set_suppression_fields_state(self, state):
         """Helper to enable/disable suppression tab parameters."""
         self.chk_ratio.config(state=state)
-        self.slider_p.config(state=state if self.override_ratio.get() else "disabled")
-        self.slider_P.config(state=state)
-        self.slider_v.config(state=state)
-        self.slider_q.config(state=state)
+        self.spin_p.config(state=state if self.override_ratio.get() else "disabled")
+        self.spin_P.config(state=state)
+        self.spin_v.config(state=state)
+        self.spin_q.config(state=state)
         self.lbl_P.config(state=state)
         self.lbl_v.config(state=state)
         self.lbl_q.config(state=state)
@@ -660,17 +672,17 @@ class SirSimulatorGUI:
         strategy_name = self.strategy_var.get()
         
         # Dynamic overrides
-        spread = float(self.slider_s.get()) if self.override_disease.get() else None
-        recovery = float(self.slider_r.get()) if self.override_disease.get() else None
-        resistance = float(self.slider_g.get()) if self.override_disease.get() else None
+        spread = float(self.spin_s.get()) if self.override_disease.get() else None
+        recovery = float(self.spin_r.get()) if self.override_disease.get() else None
+        resistance = float(self.spin_g.get()) if self.override_disease.get() else None
         frequency = int(self.spin_f.get()) if self.override_disease.get() else None
         
         outbreak = int(self.spin_outbreak.get()) if self.override_outbreak.get() else None
         
-        supp_ratio = float(self.slider_p.get()) if self.override_ratio.get() else None
-        supp_pct = float(self.slider_P.get())
-        vacc_fraction = float(self.slider_v.get())
-        quar_chance = float(self.slider_q.get())
+        supp_ratio = float(self.spin_p.get()) if self.override_ratio.get() else None
+        supp_pct = float(self.spin_P.get())
+        vacc_fraction = float(self.spin_v.get())
+        quar_chance = float(self.spin_q.get())
         
         # Concurrency/Process Limit
         if self.parallel_var.get():
