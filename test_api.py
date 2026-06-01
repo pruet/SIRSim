@@ -15,7 +15,7 @@ def main():
         strategy_name="netshield_edge_suppression",
         suppression_ratio=0.15,
         suppression_percentage=80.0,
-        parallel=True
+        workers=2
     )
     print("\n[SUCCESS] Functional API executed programmatically! Summary returned:")
     for k, v in summary.items():

@@ -17,7 +17,7 @@ import os
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-__version__ = "2.12.0"
+__version__ = "2.13.0"
 
 def parse_node_id(value):
     """
@@ -532,7 +532,7 @@ def run_sir_simulation(
     vaccination_fraction=0.10,
     quarantine_chance=0.80,
     initial_outbreak_size=None,
-    parallel=False
+    workers=None
 ):
     """
     High-level API to run a multi-run Monte Carlo SIR simulation on a NetLogo CSV graph.
@@ -552,7 +552,7 @@ def run_sir_simulation(
         vaccination_fraction (float): Default vaccination fraction if suppression_ratio is None (default: 0.10).
         quarantine_chance (float): Probability of isolating an infected node per step (default: 0.80).
         initial_outbreak_size (int): Override for the initial infected outbreak size. If None, reads from CSV.
-        parallel (bool): Enable multi-core parallel execution of Monte Carlo runs (default: False).
+        workers (int or str): Number of parallel processes to use (None/1 for sequential, -1/'all' for all CPU cores, or positive integer to limit processes).
         
     Returns:
         tuple: (avg_history, summary_metrics)
@@ -641,10 +641,43 @@ def run_sir_simulation(
     start_time = time.perf_counter()
     
     all_histories = []
-    if parallel:
+    
+    # Resolve workers parameter
+    use_parallel = False
+    max_workers = None
+    
+    if workers is not None:
+        if isinstance(workers, bool):
+            if workers:
+                use_parallel = True
+                max_workers = None
+        elif isinstance(workers, int):
+            if workers > 1:
+                use_parallel = True
+                max_workers = workers
+            elif workers == -1:
+                use_parallel = True
+                max_workers = None
+        elif isinstance(workers, str):
+            if workers.lower() == "all":
+                use_parallel = True
+                max_workers = None
+            else:
+                try:
+                    w_int = int(workers)
+                    if w_int > 1:
+                        use_parallel = True
+                        max_workers = w_int
+                    elif w_int == -1:
+                        use_parallel = True
+                        max_workers = None
+                except ValueError:
+                    pass
+
+    if use_parallel:
         from concurrent.futures import ProcessPoolExecutor
         futures = []
-        with ProcessPoolExecutor() as executor:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
             for run_idx in range(runs):
                 futures.append(
                     executor.submit(
@@ -759,7 +792,13 @@ def main():
     parser.add_argument("-o", "--output-plot", help="Filename of the saved plot (default: sir_simulation_curves.png or sir_comparison_curves.png).")
     parser.add_argument("-n", "--runs", type=int, default=50, help="Number of simulation runs to average (default: 50).")
     parser.add_argument("-i", "--initial-outbreak-size", type=int, help="Initial number of infected nodes (outbreak size). If omitted, read from GLOBALS or uses turtles in CSV.")
-    parser.add_argument("-j", "--parallel", action="store_true", help="Enable multi-core parallel execution of Monte Carlo runs.")
+    parser.add_argument(
+        "-j", "--parallel",
+        nargs="?",
+        const="all",
+        default=None,
+        help="Enable parallel execution. Optionally specify the number of worker processes (e.g. -j or -j 4)."
+    )
     parser.add_argument(
         "-a", "--alignment",
         choices=["align", "truncate"],
@@ -860,7 +899,7 @@ def main():
                 vaccination_fraction=args.vaccination_fraction,
                 quarantine_chance=args.quarantine_chance,
                 initial_outbreak_size=args.initial_outbreak_size,
-                parallel=args.parallel
+                workers=args.parallel
             )
             all_avg_histories[strategy_name] = avg_history
             summary_data.append(summary)

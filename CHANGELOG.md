@@ -4,6 +4,13 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.0] - 2026-06-01
+
+### Added
+- **Configurable Parallel Worker Process Capping**: Enhanced parallel execution engine to support explicit process count limits. The programmatic functional API `run_sir_simulation()` now accepts a `workers` argument replacing the boolean `parallel` (supporting `None`/`1` for sequential, `-1`/`'all'` or `True` for all cores, and integers `N` to limit concurrency). The CLI `-j` / `--parallel` flag is now configured with `nargs='?'` to support both flag toggling (`-j`, using all cores) and explicit process capping (`-j <N>`), preventing CPU thrashing and out-of-memory errors in resource-constrained environments.
+
+---
+
 ## [2.12.0] - 2026-06-01
 
 ### Added
