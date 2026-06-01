@@ -214,12 +214,13 @@ class SirSimulatorGUI:
         frame_file = ttk.LabelFrame(self.tab_network, text="1. Network Data Source", padding=8)
         frame_file.pack(fill=tk.X, pady=[0, 12])
         
-        # Selected File Path Label
-        lbl_file = ttk.Label(frame_file, textvariable=self.selected_file_path, font=("Courier", 12), foreground="#475569", background="#ffffff")
-        lbl_file.pack(fill=tk.X, side=tk.LEFT, expand=True, padx=[0, 8])
-        
+        # Select button packed first on the right so it stays visible
         btn_browse = ttk.Button(frame_file, text="Select Graph CSV", command=self.browse_file, style="Secondary.TButton")
-        btn_browse.pack(side=tk.RIGHT)
+        btn_browse.pack(side=tk.RIGHT, padx=5)
+        
+        # Selected File Path Label wrapped to prevent pushing layout
+        lbl_file = ttk.Label(frame_file, textvariable=self.selected_file_path, font=("Courier", 11), foreground="#475569", background="#ffffff", wraplength=230, anchor=tk.W)
+        lbl_file.pack(fill=tk.X, side=tk.LEFT, expand=True, padx=[0, 8])
         
         # Epidemic parameters frame
         frame_epidemic = ttk.LabelFrame(self.tab_network, text="2. Transmission & Disease Dynamics", padding=10)
