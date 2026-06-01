@@ -1,6 +1,6 @@
 {
-  "runs": 10,
-  "steps": 250,
+  "runs": 50,
+  "steps": 500,
   "alignment": "align",
   "strategies": [
     "baseline",
@@ -12,20 +12,20 @@
   "disease_params": {
     "spread_chance": 10.0,
     "recovery_chance": 5.0,
-    "resistance_chance": 5.0,
+    "resistance_chance": 0,
     "virus_check_frequency": 1
   },
-  "vaccination_fraction": 0.10,
-  "quarantine_chance": 0.80,
+  "vaccination_fraction": 0.0,
+  "quarantine_chance": 0.0,
   "workers": "all",
   "batch_parameters": {
     "networks": [
-      "vone_300_6_3.csv",
-      "oregon_1000_7_10.csv"
+      "oregon_1000_7_10.csv",
+      "oregon_3000_5_10.csv"
     ],
-    "initial_infected_population": [3, 10],
-    "suppression_ratio": [0.05, 0.15],
-    "suppression_percentage": [50.0, 90.0]
+    "initial_infected_population": [3, 10, 30],
+    "suppression_ratio": [0.05, 0.30],
+    "suppression_percentage": [5.0, 30.0]
   },
   "output_csv": "batch_results.csv"
 }
