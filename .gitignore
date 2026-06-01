@@ -16,3 +16,5 @@ env/
 # Large simulation output data (optional to keep, but good to ignore if generated dynamically)
 # * .csv files can be large, but if they are part of the dataset we can keep them.
 # For now, let's track the code and docs.
+*.csv
+*.png
