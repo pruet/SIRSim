@@ -17,7 +17,7 @@ import os
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-__version__ = "2.13.0"
+__version__ = "2.14.0"
 
 def parse_node_id(value):
     """
@@ -866,6 +866,33 @@ def main():
     print(f"  - Initial Resistant: {initial_resistant}")
     print("-" * 60)
 
+    # Resolve parameters for naming suffix
+    fallback_spread = 10.0
+    fallback_recovery = 5.0
+    
+    spread_val = args.spread_chance if args.spread_chance is not None else (
+        float(globals_dict.get('virus-spread-chance')) if globals_dict.get('virus-spread-chance') is not None else fallback_spread
+    )
+    recovery_val = args.recovery_chance if args.recovery_chance is not None else (
+        float(globals_dict.get('recovery-chance')) if globals_dict.get('recovery-chance') is not None else fallback_recovery
+    )
+    supp_ratio_val = args.suppression_ratio if args.suppression_ratio is not None else args.vaccination_fraction
+
+    def fmt_num(val):
+        if val is None:
+            return "None"
+        if isinstance(val, float) and val.is_integer():
+            return str(int(val))
+        return str(val)
+
+    param_suffix = f"s{fmt_num(spread_val)}_r{fmt_num(recovery_val)}_p{fmt_num(supp_ratio_val)}_P{fmt_num(args.suppression_percentage)}_v{fmt_num(args.vaccination_fraction)}_q{fmt_num(args.quarantine_chance)}"
+
+    def add_param_suffix(filepath, suffix):
+        if not filepath:
+            return filepath
+        base, ext = os.path.splitext(filepath)
+        return f"{base}_{suffix}{ext}"
+
     # Resolve strategies to run
     available_strategies = ["baseline"] + list(SUPPRESSION_REGISTRY.keys())
     selected_strategies = args.strategies
@@ -929,7 +956,8 @@ def main():
         print("=" * 60)
 
         # Generate single strategy curve visualization
-        output_plot_path = args.output_plot if args.output_plot is not None else "sir_simulation_curves.png"
+        default_plot = args.output_plot if args.output_plot is not None else "sir_simulation_curves.png"
+        output_plot_path = add_param_suffix(default_plot, param_suffix)
         try:
             plot_simulation(avg_history, output_plot_path)
         except Exception as e:
@@ -947,7 +975,8 @@ def main():
         print("=" * 130)
 
         # Generate comparison visualization
-        output_plot_path = args.output_plot if args.output_plot is not None else "sir_comparison_curves.png"
+        default_plot = args.output_plot if args.output_plot is not None else "sir_comparison_curves.png"
+        output_plot_path = add_param_suffix(default_plot, param_suffix)
         try:
             plot_comparison(all_avg_histories, output_plot_path)
         except Exception as e:
@@ -955,8 +984,9 @@ def main():
 
     # Save evaluation summary to CSV if requested
     if args.output_csv:
+        output_csv_path = add_param_suffix(args.output_csv, param_suffix)
         try:
-            with open(args.output_csv, 'w', newline='', encoding='utf-8') as csvfile:
+            with open(output_csv_path, 'w', newline='', encoding='utf-8') as csvfile:
                 fieldnames = [
                     'strategy', 'peak_infected', 'peak_infected_pct', 'peak_tick',
                     'final_susceptible_pct', 'final_infected_pct', 'final_recovered_pct', 'duration', 'execution_time'
@@ -965,7 +995,7 @@ def main():
                 writer.writeheader()
                 for row in summary_data:
                     writer.writerow(row)
-            print(f"\n[Data] Evaluation summary saved to CSV: {args.output_csv}")
+            print(f"\n[Data] Evaluation summary saved to CSV: {output_csv_path}")
         except Exception as e:
             print(f"Warning: Could not save evaluation summary to CSV: {e}", file=sys.stderr)
 

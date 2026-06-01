@@ -4,6 +4,13 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.14.0] - 2026-06-01
+
+### Added
+- **Parameter-Reflecting Output Filenames**: Introduced automatic parameter-reflecting output filename suffixing. Now, all generated output files (both plot PNGs and summary CSVs) dynamically append a parameter suffix (`_s<spread>_r<recovery>_p<suppression_ratio>_P<suppression_percentage>_v<vacc_fraction>_q<quar_chance>`) before their extensions. This operates on both default filenames and custom user-provided names, preventing users from accidentally overwriting simulation results from different runs.
+
+---
+
 ## [2.13.0] - 2026-06-01
 
 ### Added
