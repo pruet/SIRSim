@@ -4,6 +4,13 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.0] - 2026-06-01
+
+### Added
+- **Time Evaluation Integration**: Integrated execution time measurement (`execution_time`) into the multi-run simulation functional loop (`run_sir_simulation()`). The console comparative summary table now prints a new `Time (s)` column, and the output CSV includes each strategy's total execution duration, enabling users to evaluate computational complexity directly.
+
+---
+
 ## [2.10.0] - 2026-06-01
 
 ### Changed

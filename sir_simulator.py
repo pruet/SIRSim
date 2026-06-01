@@ -17,7 +17,7 @@ import os
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-__version__ = "2.10.0"
+__version__ = "2.11.0"
 
 def parse_node_id(value):
     """
@@ -592,11 +592,16 @@ def run_sir_simulation(
         simulator.strategy_func = SUPPRESSION_REGISTRY[strategy_name]
         
     # Run Monte Carlo simulations
+    import time
+    start_time = time.perf_counter()
+    
     all_histories = []
     for run_idx in range(runs):
         simulator.reset(initial_infected_nodes=initial_outbreaks[run_idx])
         simulator.run(steps)
         all_histories.append(simulator.history)
+        
+    execution_time = time.perf_counter() - start_time
         
     # Average history
     avg_history = []
@@ -665,6 +670,7 @@ def run_sir_simulation(
         'final_infected_pct': (I_end / num_nodes) * 100.0 if num_nodes > 0 else 0.0,
         'final_recovered_pct': (R_end / num_nodes) * 100.0 if num_nodes > 0 else 0.0,
         'duration': duration,
+        'execution_time': execution_time,
     }
     
     return avg_history, summary
@@ -818,15 +824,15 @@ def main():
             print(f"Warning: Could not generate visualization plot: {e}", file=sys.stderr)
     else:
         # Print comparison summary table
-        print("\n" + "=" * 112)
+        print("\n" + "=" * 130)
         print("SUPPRESSION STRATEGY EVALUATION SUMMARY")
-        print("=" * 112)
-        print(f"{'Strategy Name':<28} | {'Peak Inf. (Qty)':<16} | {'Peak Inf. (%)':<14} | {'Peak Tick':<10} | {'Final Susc. (%)':<16} | {'Duration (Steps)':<16}")
-        print("-" * 112)
+        print("=" * 130)
+        print(f"{'Strategy Name':<28} | {'Peak Inf. (Qty)':<16} | {'Peak Inf. (%)':<14} | {'Peak Tick':<10} | {'Final Susc. (%)':<16} | {'Duration (Steps)':<16} | {'Time (s)':<12}")
+        print("-" * 130)
         for row in summary_data:
             name_str = row['strategy'].replace('_', ' ').title()
-            print(f"{name_str:<28} | {row['peak_infected']:<16.2f} | {row['peak_infected_pct']:<13.2f}% | {row['peak_tick']:<10} | {row['final_susceptible_pct']:<15.2f}% | {row['duration']:<16}")
-        print("=" * 112)
+            print(f"{name_str:<28} | {row['peak_infected']:<16.2f} | {row['peak_infected_pct']:<13.2f}% | {row['peak_tick']:<10} | {row['final_susceptible_pct']:<15.2f}% | {row['duration']:<16} | {row['execution_time']:<12.4f}")
+        print("=" * 130)
 
         # Generate comparison visualization
         output_plot_path = args.output_plot if args.output_plot is not None else "sir_comparison_curves.png"
@@ -841,7 +847,7 @@ def main():
             with open(args.output_csv, 'w', newline='', encoding='utf-8') as csvfile:
                 fieldnames = [
                     'strategy', 'peak_infected', 'peak_infected_pct', 'peak_tick',
-                    'final_susceptible_pct', 'final_infected_pct', 'final_recovered_pct', 'duration'
+                    'final_susceptible_pct', 'final_infected_pct', 'final_recovered_pct', 'duration', 'execution_time'
                 ]
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
