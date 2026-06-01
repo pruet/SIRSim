@@ -17,7 +17,7 @@ import os
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-__version__ = "2.8.0"
+__version__ = "2.8.1"
 
 def parse_node_id(value):
     """
@@ -666,6 +666,7 @@ def main():
     parser.add_argument("-s", "--spread-chance", type=float, help="Virus spread chance (0 to 100). If omitted, read from GLOBALS.")
     parser.add_argument("-r", "--recovery-chance", type=float, help="Recovery chance (0 to 100). If omitted, read from GLOBALS.")
     parser.add_argument("-g", "--resistance-chance", type=float, help="Gain resistance chance (0 to 100). If omitted, read from GLOBALS or defaults to 100 (standard SIR).")
+    parser.add_argument("-f", "--virus-check-frequency", type=int, help="Virus check frequency (1 or greater). If omitted, read from GLOBALS.")
     parser.add_argument("-t", "--steps", type=int, default=500, help="Maximum number of ticks to simulate (default: 500).")
     parser.add_argument("-o", "--output-plot", help="Filename of the saved plot (default: sir_simulation_curves.png or sir_comparison_curves.png).")
     parser.add_argument("-n", "--runs", type=int, default=50, help="Number of simulation runs to average (default: 50).")
@@ -682,25 +683,25 @@ def main():
         help="List of suppression strategies to evaluate. Options: 'baseline', 'random_vaccination', 'high_degree_vaccination', 'acquaintance_vaccination', 'infected_quarantine', or 'all' (default: all)."
     )
     parser.add_argument(
-        "--vaccination-fraction",
+        "-v", "--vaccination-fraction",
         type=float,
         default=0.10,
         help="Fraction of nodes to vaccinate in vaccination strategies (default: 0.10)."
     )
     parser.add_argument(
-        "--quarantine-chance",
+        "-q", "--quarantine-chance",
         type=float,
         default=0.80,
         help="Probability of isolating an infected node per step in infected_quarantine (default: 0.80)."
     )
     parser.add_argument(
-        "--suppression-ratio",
+        "-p", "--suppression-ratio",
         type=float,
         default=None,
         help="Fraction of nodes/edges to suppress (default: None, which maps to --vaccination-fraction)."
     )
     parser.add_argument(
-        "--suppression-percentage",
+        "-P", "--suppression-percentage",
         type=float,
         default=90.0,
         help="Percentage of weight reduction for suppressed edges (default: 90.0, i.e., 90% reduction)."
