@@ -198,51 +198,75 @@ def greedy_edge_weight_suppression(simulator, event_type, **kwargs):
 @register_strategy("reliable_cluster_edge_suppression")
 def reliable_cluster_edge_suppression(simulator, event_type, **kwargs):
     """
-    Reliable Cluster-based Edge Suppression (inspired by Pruet Boonma's "Reliable Cluster on Uncertain Multigraph" paper):
-    groups nodes into robust/reliable clusters (communities) using weighted Louvain community detection on the
-    uncertain/probabilistic link weights, then suppresses the top highest-weight inter-cluster bridging edges by 90% at setup.
+    Reliable Cluster-based Edge Suppression (implementing the exact Most-Probability-First algorithm
+    from Pruet Boonma's "Reliable Cluster on Uncertain Multigraph" paper):
+    1. Initializes each node as a singleton cluster.
+    2. Sorts all network edges descending by their transmission probability (weight).
+    3. Greedily merges clusters connected by the highest probability edges first until exactly k clusters remain.
+    4. Identifies all inter-cluster bridging edges and suppresses the top highest-weight links.
     """
     if event_type == "setup":
-        import networkx as nx
-        
-        # Build weighted graph from simulator.adj
-        G = nx.Graph()
-        for u in simulator.adj:
-            for v, w in simulator.adj[u].items():
-                G.add_edge(u, v, weight=w)
-                
-        # Detect communities using weighted Louvain with a fixed seed for reproducible determinism
-        try:
-            communities = nx.community.louvain_communities(G, weight='weight', seed=42)
-        except Exception:
-            communities = nx.community.label_propagation_communities(G)
-            
-        # Map each node to its community index
-        node_to_community = {}
-        for comm_idx, comm in enumerate(communities):
-            for node in comm:
-                node_to_community[node] = comm_idx
-                
-        # Collect all edges that link between different communities
-        inter_community_edges = []
+        # Collect all unique edges and their weights
+        edges = []
         seen_edges = set()
         for u in simulator.adj:
             for v in simulator.adj[u]:
                 edge_key = tuple(sorted((u, v)))
                 if edge_key not in seen_edges:
                     seen_edges.add(edge_key)
-                    u_comm = node_to_community.get(u)
-                    v_comm = node_to_community.get(v)
-                    if u_comm is not None and v_comm is not None and u_comm != v_comm:
-                        w = simulator.adj[u][v]
-                        inter_community_edges.append((edge_key, w))
-                        
-        # Sort bridging edges by weight in descending order
-        inter_community_edges.sort(key=lambda item: item[1], reverse=True)
+                    w = simulator.adj[u][v]
+                    edges.append((u, v, w))
+                    
+        # Sort edges by weight in descending order (highest probability first)
+        edges.sort(key=lambda x: x[2], reverse=True)
         
-        # The suppression budget is calculated as a fraction of the TOTAL edges in the graph,
-        # ensuring a fair comparison with other edge suppression strategies.
-        total_edges = sum(len(neighbors) for neighbors in simulator.adj.values()) // 2
+        # Disjoint-Set (Union-Find) for Most-Probability-First clustering
+        all_nodes = list(simulator.adj.keys())
+        parent = {node: node for node in all_nodes}
+        
+        def find(node):
+            path = []
+            while parent[node] != node:
+                path.append(node)
+                node = parent[node]
+            for n in path:
+                parent[n] = node
+            return node
+            
+        def union(node1, node2):
+            root1 = find(node1)
+            root2 = find(node2)
+            if root1 != root2:
+                parent[root1] = root2
+                return True
+            return False
+            
+        # Target k clusters (defaulting to 15, matching the NBiS 2015 paper's parameters)
+        k = 15
+        num_clusters = len(all_nodes)
+        
+        for u, v, w in edges:
+            if num_clusters <= k:
+                break
+            if union(u, v):
+                num_clusters -= 1
+                
+        # Map each node to its final cluster root ID
+        node_to_community = {node: find(node) for node in all_nodes}
+        
+        # Collect all inter-cluster bridging edges
+        inter_community_edges = []
+        for u, v, w in edges:
+            u_comm = node_to_community[u]
+            v_comm = node_to_community[v]
+            if u_comm != v_comm:
+                inter_community_edges.append(((u, v), w))
+                
+        # Sort bridging edges descending by weight
+        inter_community_edges.sort(key=lambda x: x[1], reverse=True)
+        
+        # Suppression budget is calculated as a fraction of TOTAL edges in the graph
+        total_edges = len(edges)
         num_to_suppress = int(total_edges * simulator.suppression_ratio)
         if num_to_suppress > 0:
             top_bridging = inter_community_edges[:num_to_suppress]

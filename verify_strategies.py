@@ -152,30 +152,55 @@ def run_verification(file_path):
                     # Reliable cluster suppresses inter-cluster bridging edges up to the total edge budget
                     reduction_factor = 1.0 - (pct / 100.0)
                     
-                    # Detect communities in original graph
-                    G = nx.Graph()
-                    for u in adj:
-                        for v, w in adj[u].items():
-                            G.add_edge(u, v, weight=w)
-                    try:
-                        communities = nx.community.louvain_communities(G, weight='weight', seed=42)
-                    except Exception:
-                        communities = nx.community.label_propagation_communities(G)
+                    # Collect all unique edges in the original graph
+                    orig_edges = []
+                    seen_orig = set()
+                    for u in sim.original_adj:
+                        for v in sim.original_adj[u]:
+                            edge_key = tuple(sorted((u, v)))
+                            if edge_key not in seen_orig:
+                                seen_orig.add(edge_key)
+                                orig_edges.append((u, v, sim.original_adj[u][v]))
+                                
+                    orig_edges.sort(key=lambda x: x[2], reverse=True)
+                    
+                    # Replicate Union-Find clustering with k = 15
+                    parent = {node: node for node in all_nodes}
+                    def find(node):
+                        path = []
+                        while parent[node] != node:
+                            path.append(node)
+                            node = parent[node]
+                        for n in path:
+                            parent[n] = node
+                        return node
                         
-                    node_to_community = {}
-                    for comm_idx, comm in enumerate(communities):
-                        for node in comm:
-                            node_to_community[node] = comm_idx
+                    def union(node1, node2):
+                        root1 = find(node1)
+                        root2 = find(node2)
+                        if root1 != root2:
+                            parent[root1] = root2
+                            return True
+                        return False
+                        
+                    k = 15
+                    num_clusters = len(all_nodes)
+                    for u, v, w in orig_edges:
+                        if num_clusters <= k:
+                            break
+                        if union(u, v):
+                            num_clusters -= 1
                             
+                    node_to_community = {node: find(node) for node in all_nodes}
+                    
                     # Get all inter-community edges
                     inter_edges = set()
-                    for u in adj:
-                        for v in adj[u]:
-                            u_comm = node_to_community.get(u)
-                            v_comm = node_to_community.get(v)
-                            if u_comm is not None and v_comm is not None and u_comm != v_comm:
-                                inter_edges.add(tuple(sorted((u, v))))
-                                
+                    for u, v, w in orig_edges:
+                        u_comm = node_to_community[u]
+                        v_comm = node_to_community[v]
+                        if u_comm != v_comm:
+                            inter_edges.add(tuple(sorted((u, v))))
+                            
                     # Collect all modified unique undirected edges
                     modified_edges = []
                     seen = set()

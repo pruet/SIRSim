@@ -125,7 +125,7 @@ class SirSimulatorGUI:
         lbl_title = ttk.Label(header, text="EPIDEMIC NETWORK SIMULATOR", style="HeaderTitle.TLabel")
         lbl_title.pack(anchor=tk.W)
         
-        lbl_sub = ttk.Label(header, text="Engine Version: 2.15.0 | Robust Louvain Community Detection & Spectral Immunization Suppression", style="HeaderSub.TLabel")
+        lbl_sub = ttk.Label(header, text="Engine Version: 2.17.0 | Most-Probability-First Clustering & Spectral Immunization Suppression", style="HeaderSub.TLabel")
         lbl_sub.pack(anchor=tk.W, pady=[2, 0])
         
         # Horizontal Split Panel
@@ -575,7 +575,7 @@ class SirSimulatorGUI:
             "netshield_edge_suppression": "Spectral edge suppression algorithm. Maximizes network-level Shield-value strictly over susceptible nodes, and suppresses adjacent edges incident to central nodes.",
             "centrality_edge_suppression": "Eigenvector centrality-based edge suppression. Targets highly central bridging nodes, and suppresses transmission rates of adjacent connections.",
             "greedy_edge_weight_suppression": "Link-level containment. Globally sorts all transmission links in descending order of weight, and suppresses the highest-probability links first.",
-            "reliable_cluster_edge_suppression": "Community-level containment based on Boonma's paper. Detects robust clusters using Louvain partitioning, and suppresses bridging links to isolate clusters."
+            "reliable_cluster_edge_suppression": "Community-level containment based on Boonma's paper. Detects robust clusters using Most-Probability-First (MPF) clustering, and suppresses bridging links to isolate clusters."
         }
         
         self.lbl_strategy_note.config(text=explanations.get(strat, ""))

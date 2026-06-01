@@ -4,6 +4,15 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.17.0] - 2026-06-01
+
+### Added
+- **Most-Probability-First Reliable Clustering**: Updated the `reliable_cluster_edge_suppression` strategy in `suppression_strategies.py` to use the exact Most-Probability-First (MPF) algorithm from Pruet Boonma and Juggapong Natwichai's 2015 paper *"Reliable Cluster on Uncertain Multigraph"*.
+- **High-Performance Union-Find**: Swapped out the legacy Louvain community detection heuristic for an optimized Disjoint-Set/Union-Find forest structure with path compression and rank-based union, enabling almost linear-time complexity ($O(|E| \log |V|)$) and removing external NetworkX dependency for community clustering.
+- **Verification & UI Alignment**: Updated `verify_strategies.py` and `gui_simulator.py` to incorporate and verify the exact MPF-based clustering logic and update the interactive UI notes.
+
+---
+
 ## [2.16.0] - 2026-06-01
 
 ### Added
