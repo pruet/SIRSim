@@ -4,6 +4,13 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.16.0] - 2026-06-01
+
+### Added
+- **Asynchronous Combinatoric Batch Simulation System**: Introduced a high-performance batch simulation runner (`batch_runner.py`) driven by a JSON configuration file (`batch_config.json`). The batch engine automatically calculates sample network sizes, edges, and true average degrees, then executes the Cartesian product of all network files, initial outbreak sizes, suppression ratios, and suppression weight percentages. Results are progressively generated and appended to a unified, multi-parameter output CSV file, allowing for seamless large-scale epidemic analysis.
+
+---
+
 ## [2.15.0] - 2026-06-01
 
 ### Added
