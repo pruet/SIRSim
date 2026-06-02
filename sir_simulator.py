@@ -17,7 +17,7 @@ import os
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-__version__ = "2.16.0"
+__version__ = "2.17.1"
 
 def parse_node_id(value):
     """
@@ -169,8 +169,8 @@ class SIRNetworkSimulator:
           2: Recovered/Resistant (R)
         """
         self.original_adj = original_adj
-        # Deep copy original_adj to self.adj to allow strategies to safely modify topology
-        self.adj = {u: dict(neighbors) for u, neighbors in original_adj.items()}
+        # Deep copy original_adj to self.adj, ensuring all nodes (including isolated ones) have an entry
+        self.adj = {u: dict(original_adj.get(u, {})) for u in nodes}
         
         self.spread_chance = spread_chance             # global spread chance (0 to 100)
         self.recovery_chance = recovery_chance / 100.0 # gamma (0.0 to 1.0)
@@ -322,8 +322,8 @@ class SIRNetworkSimulator:
         """
         Resets the simulator state for a new run.
         """
-        # Restore original adjacency list for a fresh start
-        self.adj = {u: dict(neighbors) for u, neighbors in self.original_adj.items()}
+        # Restore original adjacency list for a fresh start, ensuring all nodes have an entry
+        self.adj = {u: dict(self.original_adj.get(u, {})) for u in self.timers}
         
         self.states = {who: 0 for who in self.timers} # Reset all to susceptible
         

@@ -125,7 +125,7 @@ class SirSimulatorGUI:
         lbl_title = ttk.Label(header, text="EPIDEMIC NETWORK SIMULATOR", style="HeaderTitle.TLabel")
         lbl_title.pack(anchor=tk.W)
         
-        lbl_sub = ttk.Label(header, text="Engine Version: 2.17.0 | Most-Probability-First Clustering & Spectral Immunization Suppression", style="HeaderSub.TLabel")
+        lbl_sub = ttk.Label(header, text="Engine Version: 2.17.1 | Most-Probability-First Clustering & Spectral Immunization Suppression", style="HeaderSub.TLabel")
         lbl_sub.pack(anchor=tk.W, pady=[2, 0])
         
         # Horizontal Split Panel

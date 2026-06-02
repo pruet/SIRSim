@@ -4,6 +4,13 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.17.1] - 2026-06-02
+
+### Fixed
+- **Isolated Node KeyError Prevention**: Fixed a critical simulation engine KeyError bug that occurred when running on networks containing isolated (degree-0) nodes (such as Stochastic Block Model networks with disconnected vertices) and an isolated node was selected as an outbreak seed. Initialized the adjacency list mapping `self.adj` for all nodes in the network to ensure dictionary safety across all suppression strategies and Monte Carlo simulation loops.
+
+---
+
 ## [2.17.0] - 2026-06-01
 
 ### Added
