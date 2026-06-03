@@ -483,7 +483,7 @@ def plot_comparison(all_avg_histories, output_path):
         'high_degree_vaccination': '#34495e',                 # Wet Asphalt (Dark Grey/Blue)
         'acquaintance_vaccination': '#7f8c8d',                # Asbestos (Medium Grey)
         'infected_quarantine': '#27ae60',                     # Dark Emerald Green
-        'netshield_edge_suppression': '#1abc9c',            # Turquoise/Teal
+        'netshield_edge_suppression': '#ad1457',            # Deep Berry/Magenta
         'centrality_edge_suppression': '#3498db',           # Bright Blue
         'greedy_edge_weight_suppression': '#f1c40f',        # Bright Gold/Yellow
         'reliable_cluster_edge_suppression': '#9b59b6',      # Vibrant Amethyst/Purple
