@@ -479,14 +479,16 @@ def plot_comparison(all_avg_histories, output_path):
     # Sleek modern palette mapping for all registered and default strategies
     colors = {
         'baseline': '#e74c3c',                              # Red
-        'random_vaccination': '#f39c12',                     # Orange
-        'high_degree_vaccination': '#3498db',                 # Blue
-        'acquaintance_vaccination': '#9b59b6',                # Purple
-        'infected_quarantine': '#2ecc71',                     # Green
-        'netshield_edge_suppression': '#1abc9c',            # Teal
-        'centrality_edge_suppression': '#34495e',           # Charcoal Grey
-        'greedy_edge_weight_suppression': '#d35400',        # Dark Rust Orange
-        'reliable_cluster_edge_suppression': '#6c5ce7'      # Deep Indigo / Purple (High Contrast)
+        'random_vaccination': '#95a5a6',                     # Slate Grey
+        'high_degree_vaccination': '#34495e',                 # Wet Asphalt (Dark Grey/Blue)
+        'acquaintance_vaccination': '#7f8c8d',                # Asbestos (Medium Grey)
+        'infected_quarantine': '#27ae60',                     # Dark Emerald Green
+        'netshield_edge_suppression': '#1abc9c',            # Turquoise/Teal
+        'centrality_edge_suppression': '#3498db',           # Bright Blue
+        'greedy_edge_weight_suppression': '#f1c40f',        # Bright Gold/Yellow
+        'reliable_cluster_edge_suppression': '#9b59b6',      # Vibrant Amethyst/Purple
+        'size_constrained_mpf_suppression': '#e67e22',       # Orange
+        'average_linkage_mpf_suppression': '#2ecc71',        # Emerald Green
     }
     # Fallback colors for other user-defined strategies
     extra_colors = ['#16a085', '#27ae60', '#2980b9', '#8e44ad', '#2c3e50']
