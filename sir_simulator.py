@@ -17,7 +17,7 @@ import os
 from collections import defaultdict
 import matplotlib.pyplot as plt
 
-__version__ = "2.17.1"
+__version__ = "2.17.2"
 
 def parse_node_id(value):
     """
@@ -476,16 +476,20 @@ def plot_comparison(all_avg_histories, output_path):
     plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
     fig, ax = plt.subplots(figsize=(12, 7), dpi=150)
 
-    # Sleek modern palette
+    # Sleek modern palette mapping for all registered and default strategies
     colors = {
-        'baseline': '#e74c3c',              # Red
-        'random_vaccination': '#f39c12',     # Orange
-        'high_degree_vaccination': '#3498db', # Blue
-        'acquaintance_vaccination': '#9b59b6',# Purple
-        'infected_quarantine': '#2ecc71'     # Green
+        'baseline': '#e74c3c',                              # Red
+        'random_vaccination': '#f39c12',                     # Orange
+        'high_degree_vaccination': '#3498db',                 # Blue
+        'acquaintance_vaccination': '#9b59b6',                # Purple
+        'infected_quarantine': '#2ecc71',                     # Green
+        'netshield_edge_suppression': '#1abc9c',            # Teal
+        'centrality_edge_suppression': '#34495e',           # Charcoal Grey
+        'greedy_edge_weight_suppression': '#d35400',        # Dark Rust Orange
+        'reliable_cluster_edge_suppression': '#6c5ce7'      # Deep Indigo / Purple (High Contrast)
     }
     # Fallback colors for other user-defined strategies
-    extra_colors = ['#1abc9c', '#34495e', '#e67e22', '#d35400', '#7f8c8d']
+    extra_colors = ['#16a085', '#27ae60', '#2980b9', '#8e44ad', '#2c3e50']
 
     color_idx = 0
     for name, history in all_avg_histories.items():

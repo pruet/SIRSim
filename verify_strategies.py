@@ -164,40 +164,75 @@ def run_verification(file_path):
                                 
                     orig_edges.sort(key=lambda x: x[2], reverse=True)
                     
-                    # Replicate Union-Find clustering with k = 15
-                    parent = {node: node for node in all_nodes}
-                    def find(node):
-                        path = []
-                        while parent[node] != node:
-                            path.append(node)
-                            node = parent[node]
-                        for n in path:
-                            parent[n] = node
-                        return node
-                        
-                    def union(node1, node2):
-                        root1 = find(node1)
-                        root2 = find(node2)
-                        if root1 != root2:
-                            parent[root1] = root2
-                            return True
-                        return False
-                        
-                    k = 15
-                    num_clusters = len(all_nodes)
-                    for u, v, w in orig_edges:
-                        if num_clusters <= k:
-                            break
-                        if union(u, v):
-                            num_clusters -= 1
-                            
-                    node_to_community = {node: find(node) for node in all_nodes}
+                    # Replicate Union-Find clustering with optimized k in range [min_k, max_k] using Modularity Maximization
+                    node_strength = {u: sum(sim.original_adj[u].values()) for u in sim.original_adj}
+                    total_strength = sum(node_strength.values())
                     
-                    # Get all inter-community edges
+                    initial_infected_count = sum(1 for state in sim.states.values() if state == 1)
+                    min_k = max(2, initial_infected_count)
+                    max_k = max(15, min_k)
+                    
+                    best_k = min_k
+                    max_modularity = -float('inf')
+                    best_node_to_community = None
+                    
+                    for temp_k in range(min_k, max_k + 1):
+                        parent = {node: node for node in all_nodes}
+                        def find(node):
+                            path = []
+                            while parent[node] != node:
+                                path.append(node)
+                                node = parent[node]
+                            for n in path:
+                                parent[n] = node
+                            return node
+                            
+                        def union(node1, node2):
+                            root1 = find(node1)
+                            root2 = find(node2)
+                            if root1 != root2:
+                                parent[root1] = root2
+                                return True
+                            return False
+                            
+                        num_clusters = len(all_nodes)
+                        for u, v, w in orig_edges:
+                            if num_clusters <= temp_k:
+                                break
+                            if union(u, v):
+                                num_clusters -= 1
+                                
+                        node_to_community = {node: find(node) for node in all_nodes}
+                        
+                        # Map community root to its list of nodes
+                        comm_nodes = {}
+                        for node, comm in node_to_community.items():
+                            if comm not in comm_nodes:
+                                comm_nodes[comm] = []
+                            comm_nodes[comm].append(node)
+                            
+                        # Calculate Modularity Q for this partition
+                        modularity_val = 0.0
+                        if total_strength > 1e-9:
+                            for comm, members in comm_nodes.items():
+                                vol = sum(node_strength.get(node, 0.0) for node in members)
+                                internal_weight = 0.0
+                                for u in members:
+                                    for v, weight in sim.original_adj[u].items():
+                                        if node_to_community.get(v) == comm:
+                                            internal_weight += weight
+                                modularity_val += (internal_weight / total_strength) - (vol / total_strength) ** 2
+                                
+                        if modularity_val > max_modularity:
+                            max_modularity = modularity_val
+                            best_k = temp_k
+                            best_node_to_community = node_to_community
+                            
+                    # Get all inter-community edges under the optimal k
                     inter_edges = set()
                     for u, v, w in orig_edges:
-                        u_comm = node_to_community[u]
-                        v_comm = node_to_community[v]
+                        u_comm = best_node_to_community[u]
+                        v_comm = best_node_to_community[v]
                         if u_comm != v_comm:
                             inter_edges.add(tuple(sorted((u, v))))
                             
