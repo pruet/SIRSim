@@ -481,6 +481,8 @@ def average_linkage_mpf_suppression(simulator, event_type, **kwargs):
                 c1 = active_list[0]
                 c2 = active_list[1]
                 neg_sim = 0.0
+                s1 = cluster_size[c1]
+                s2 = cluster_size[c2]
             else:
                 neg_sim, c1, c2, s1, s2 = heapq.heappop(heap)
                 
@@ -500,32 +502,33 @@ def average_linkage_mpf_suppression(simulator, event_type, **kwargs):
             cluster_size[c1] += cluster_size[c2]
             del cluster_size[c2]
             
-            neighbors = set(inter_weight[c1].keys()).union(inter_weight[c2].keys())
+            # Clean up and find active neighbors
+            c1_active_neighbors = {c3 for c3 in inter_weight[c1] if c3 in active_clusters}
+            c2_active_neighbors = {c3 for c3 in inter_weight[c2] if c3 in active_clusters}
+            neighbors = c1_active_neighbors.union(c2_active_neighbors)
             neighbors.discard(c1)
-            neighbors.discard(c2)
             
-            for c3 in list(inter_weight[c2].keys()):
-                if c3 in active_clusters:
-                    if c2 in inter_weight[c3]:
-                        del inter_weight[c3][c2]
-                        
+            # Remove c2 from c3's neighbors
+            for c3 in c2_active_neighbors:
+                if c2 in inter_weight[c3]:
+                    del inter_weight[c3][c2]
+                    
+            # Update inter-cluster weights for c1
+            new_c1_weights = {}
             for c3 in neighbors:
-                if c3 not in active_clusters:
-                    continue
                 w_c1_c3 = inter_weight[c1].get(c3, 0.0)
                 w_c2_c3 = inter_weight[c2].get(c3, 0.0)
                 new_weight = w_c1_c3 + w_c2_c3
                 
-                inter_weight[c1][c3] = new_weight
+                new_c1_weights[c3] = new_weight
                 inter_weight[c3][c1] = new_weight
                 
                 sim = new_weight / (cluster_size[c1] * cluster_size[c3])
-                heapq.heappush(heap, (-sim, min(c1, c3), max(c1, c3), cluster_size[c1], cluster_size[c3]))
+                c_min, c_max = min(c1, c3), max(c1, c3)
+                heapq.heappush(heap, (-sim, c_min, c_max, cluster_size[c_min], cluster_size[c_max]))
                 
-            if c2 in inter_weight:
-                del inter_weight[c2]
-            if c2 in inter_weight[c1]:
-                del inter_weight[c1][c2]
+            inter_weight[c1] = new_c1_weights
+            del inter_weight[c2]
                 
             num_clusters -= 1
             if min_k <= num_clusters <= max_k:

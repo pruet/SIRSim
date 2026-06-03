@@ -4,12 +4,16 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.17.2] - 2026-06-03
+## [2.17.3] - 2026-06-03
 
 ### Fixed
-- **Average-Linkage MPF Stale Heap Entries**: Resolved a critical algorithmic bug in `average_linkage_mpf_suppression` inside `suppression_strategies.py` where similarity heap entries became stale after merges. Added size-tracking and verification checks at pop-time to skip invalid entries, ensuring mathematical correctness of the average-linkage hierarchical clustering.
+- **Average-Linkage MPF Infinite Loop**: Fixed a critical infinite loop bug in `average_linkage_mpf_suppression` fallback logic when the similarity heap runs empty (due to disconnected components in dense graphs like `polblogs.csv`). Initialized fallback sizes `s1` and `s2` to prevent false stale-element continues.
+- **Average-Linkage MPF Heap Order Mismatch**: Fixed a size-ordering bug where similarity heap pushes had cluster sizes mismatched with their min/max sorted cluster names, causing valid heap elements to be erroneously skipped as stale.
+- **Average-Linkage MPF Pruning Optimization**: Optimized cluster merging by dynamically pruning dead/merged clusters from the `inter_weight` tracking dictionaries, eliminating redundant operations and yielding a multi-thousand-fold execution speedup.
 
 ---
+
+## [2.17.2] - 2026-06-03
 
 ## [2.17.1] - 2026-06-02
 
