@@ -4,6 +4,14 @@ All notable changes to the Oregon Network Analysis simulation and conversion cod
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.18.0] - 2026-06-04
+
+### Added
+- **Size-Constrained Average-Linkage MPF**: Implemented a size-constrained Average-Linkage MPF strategy (`average_linkage_mpf_suppression` in `suppression_strategies.py`) that enforces a dynamic maximum cluster size limit to prevent giant component collapse during hierarchical clustering on dense/skewed networks, improving containment.
+- **Robust Agglomeration Fallback**: Added a safe fallback termination check during size-constrained Average-Linkage merges to prevent infinite loops in graphs with disconnected components when no valid merges remain.
+
+---
+
 ## [2.17.3] - 2026-06-03
 
 ### Fixed
