@@ -426,7 +426,8 @@ def size_constrained_mpf_suppression(simulator, event_type, **kwargs):
 def average_linkage_mpf_suppression(simulator, event_type, **kwargs):
     """
     Average-Linkage MPF Suppression:
-    1. Reconstructs communities using Average-Linkage Hierarchical Clustering.
+    1. Reconstructs communities using Average-Linkage Hierarchical Clustering,
+       enforcing a maximum cluster size limit to prevent giant component collapse.
     2. Modularity is evaluated dynamically to select the best k.
     3. Identifies inter-cluster bridging edges and suppresses them.
     """
@@ -465,6 +466,9 @@ def average_linkage_mpf_suppression(simulator, event_type, **kwargs):
         min_k = max(2, initial_infected_count)
         max_k = max(15, min_k)
         
+        # Set dynamic cluster size limit: 1.5 * (N / min_k) to prevent giant component collapse
+        max_size_limit = max(10, int(1.5 * (n_nodes / min_k)))
+        
         # Pre-populate partitions with fallback
         default_partition = {node: node for node in all_nodes}
         for temp_k in range(min_k, max_k + 1):
@@ -478,8 +482,21 @@ def average_linkage_mpf_suppression(simulator, event_type, **kwargs):
                 active_list = list(active_clusters)
                 if len(active_list) < 2:
                     break
-                c1 = active_list[0]
-                c2 = active_list[1]
+                # Find the first pair in active_list that doesn't violate max_size_limit
+                found = False
+                for i in range(len(active_list)):
+                    for j in range(i + 1, len(active_list)):
+                        c1_temp = active_list[i]
+                        c2_temp = active_list[j]
+                        if cluster_size[c1_temp] + cluster_size[c2_temp] <= max_size_limit:
+                            c1 = c1_temp
+                            c2 = c2_temp
+                            found = True
+                            break
+                    if found:
+                        break
+                if not found:
+                    break
                 neg_sim = 0.0
                 s1 = cluster_size[c1]
                 s2 = cluster_size[c2]
@@ -489,6 +506,10 @@ def average_linkage_mpf_suppression(simulator, event_type, **kwargs):
             if c1 not in active_clusters or c2 not in active_clusters:
                 continue
             if cluster_size[c1] != s1 or cluster_size[c2] != s2:
+                continue
+                
+            # ENFORCE SIZE CONSTRAINT
+            if cluster_size[c1] + cluster_size[c2] > max_size_limit:
                 continue
                 
             active_clusters.remove(c2)
@@ -523,9 +544,11 @@ def average_linkage_mpf_suppression(simulator, event_type, **kwargs):
                 new_c1_weights[c3] = new_weight
                 inter_weight[c3][c1] = new_weight
                 
-                sim = new_weight / (cluster_size[c1] * cluster_size[c3])
-                c_min, c_max = min(c1, c3), max(c1, c3)
-                heapq.heappush(heap, (-sim, c_min, c_max, cluster_size[c_min], cluster_size[c_max]))
+                # Push new merge option only if it wouldn't violate the size limit
+                if cluster_size[c1] + cluster_size[c3] <= max_size_limit:
+                    sim = new_weight / (cluster_size[c1] * cluster_size[c3])
+                    c_min, c_max = min(c1, c3), max(c1, c3)
+                    heapq.heappush(heap, (-sim, c_min, c_max, cluster_size[c_min], cluster_size[c_max]))
                 
             inter_weight[c1] = new_c1_weights
             del inter_weight[c2]
