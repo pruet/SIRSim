@@ -22,3 +22,9 @@ env/
 # Allow tracking dataset files
 !Datasets/**/*.csv
 !Datasets/**/*.png
+
+# Allow tracking specific winning results
+!Results/**/vone_3000_winning_curves.png
+!Results/**/comparison_vone_3000_winning.csv
+!Results/**/vone_3000_winning_curves_*.png
+!Results/**/comparison_vone_3000_winning_*.csv
