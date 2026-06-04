@@ -635,7 +635,7 @@ def run_sir_simulation(
         
     # Pre-generate initial outbreaks to ensure identical outbreaks per run
     # Set seed to ensure consistency across separate strategy evaluations
-    random.seed(1002)
+    random.seed(1000)
     initial_outbreaks = []
     all_node_ids = list(nodes.keys())
     for run_idx in range(runs):
@@ -714,14 +714,14 @@ def run_sir_simulation(
                         strategy_name,
                         steps,
                         initial_outbreaks[run_idx],
-                        1002 + run_idx
+                        1000 + run_idx
                     )
                 )
             for fut in futures:
                 all_histories.append(fut.result())
     else:
         for run_idx in range(runs):
-            random.seed(1002 + run_idx)
+            random.seed(1000 + run_idx)
             simulator.reset(initial_infected_nodes=initial_outbreaks[run_idx])
             simulator.run(steps)
             all_histories.append(simulator.history)
