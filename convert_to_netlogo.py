@@ -15,7 +15,7 @@ def convert_graph_to_netlogo(input_file, output_file, sample_size=None, initial_
     
     with open(input_file, 'r') as f:
         for line in f:
-            if line.startswith('#') or not line.strip():
+            if line.startswith('#') or line.startswith('%') or not line.strip():
                 continue
             parts = line.split()
             if len(parts) >= 2:
@@ -137,13 +137,21 @@ def convert_graph_to_netlogo(input_file, output_file, sample_size=None, initial_
         writer.writerow([])
 
 if __name__ == "__main__":
-    input_txt = "oregon1_010331.txt"
-    output_csv = "oregon_3000_5_50.csv"
-    if os.path.exists(input_txt):
-        # Set sample_size and initial_infected as needed
-        convert_graph_to_netlogo(input_txt, output_csv, sample_size=3000, initial_infected=50)
-        print(f"Successfully created {output_csv} with 3,000 nodes and 10 infected.")
-    else:
-        print(f"Error: {input_txt} not found.")
+    import argparse
+    parser = argparse.ArgumentParser(description="Convert an edge-list file to NetLogo export-world format")
+    parser.add_argument("input_file", help="Path to the input text file (space/tab separated edge list)")
+    parser.add_argument("output_file", help="Path to the output CSV file")
+    parser.add_argument("-n", "--nodes", type=int, default=None, help="Target number of nodes to sample (optional)")
+    parser.add_argument("-i", "--infected", type=int, default=10, help="Initial number of infected nodes (default: 10)")
+    parser.add_argument("-s", "--spread-chance", type=float, default=10.0, help="Virus spread chance (default: 10.0)")
+    args = parser.parse_args()
+    
+    convert_graph_to_netlogo(
+        args.input_file,
+        args.output_file,
+        sample_size=args.nodes,
+        initial_infected=args.infected,
+        virus_spread_chance=args.spread_chance
+    )
 
 
