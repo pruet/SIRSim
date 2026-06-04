@@ -17,6 +17,7 @@ import numpy as np
 
 # Global registry of suppression strategies.
 SUPPRESSION_REGISTRY = {}
+_STRATEGY_CACHE = {}
 
 def register_strategy(name):
     """
@@ -75,22 +76,20 @@ def run_netshield(nodes_list, adj, k):
     # member_sum[j] = sum_{i in S} A(i, j) * u[i]
     member_sum = np.zeros(n)
     
+    # Precompute 2 * lambda_1 * u^2 term
+    u_sq_term = 2 * lambda_1 * (u ** 2)
+    
     for _ in range(k):
-        best_gain = -float('inf')
-        best_node_idx = -1
+        # Vectorized marginal gain computation: 2 * lambda_1 * u^2 - 2 * member_sum * u
+        gains = u_sq_term - 2 * member_sum * u
         
-        for j in range(n):
-            if j in S:
-                continue
+        # Exclude already selected nodes
+        if S:
+            gains[list(S)] = -float('inf')
             
-            # Compute marginal gain: gain = 2 * lambda_1 * u(j)^2 - 2 * member_sum[j] * u(j)
-            gain = 2 * lambda_1 * (u[j] ** 2) - 2 * member_sum[j] * u[j]
-            
-            if gain > best_gain:
-                best_gain = gain
-                best_node_idx = j
-                
-        if best_node_idx == -1:
+        best_node_idx = np.argmax(gains)
+        
+        if gains[best_node_idx] == -float('inf'):
             break
             
         S.add(best_node_idx)
@@ -101,8 +100,7 @@ def run_netshield(nodes_list, adj, k):
         for neighbor, weight in adj[node_name].items():
             if neighbor in node_to_idx:
                 j = node_to_idx[neighbor]
-                w = weight
-                member_sum[j] += w * u[i_star]
+                member_sum[j] += weight * u[i_star]
             
     return [nodes_list[idx] for idx in S]
 
@@ -113,6 +111,16 @@ def netshield_edge_suppression(simulator, event_type, **kwargs):
     then suppresses all edges incident to those nodes by the standard suppression percentage.
     """
     if event_type == "setup":
+        cache_key = (
+            "netshield_edge_suppression",
+            id(simulator.original_adj),
+            simulator.suppression_ratio,
+            simulator.suppression_percentage
+        )
+        if cache_key in _STRATEGY_CACHE:
+            simulator.adj = {u: dict(_STRATEGY_CACHE[cache_key][u]) for u in _STRATEGY_CACHE[cache_key]}
+            return
+
         all_nodes = list(simulator.states.keys())
         num_to_suppress = int(len(all_nodes) * simulator.suppression_ratio)
         if num_to_suppress > 0:
@@ -131,14 +139,26 @@ def netshield_edge_suppression(simulator, event_type, **kwargs):
                         simulator.adj[u_node][v_node] = new_weight
                         if u_node in simulator.adj[v_node]:
                             simulator.adj[v_node][u_node] = new_weight
+        
+        _STRATEGY_CACHE[cache_key] = {u: dict(simulator.adj[u]) for u in simulator.adj}
 
 @register_strategy("centrality_edge_suppression")
 def centrality_edge_suppression(simulator, event_type, **kwargs):
     """
     Centrality-based edge suppression: identifies top central nodes using eigenvector centrality
-    and randomly reduces the weights of their adjacent links (by multiplying by a random factor in [0.1, 0.5]) at setup.
+    and reduces the weights of their adjacent links at setup.
     """
     if event_type == "setup":
+        cache_key = (
+            "centrality_edge_suppression",
+            id(simulator.original_adj),
+            simulator.suppression_ratio,
+            simulator.suppression_percentage
+        )
+        if cache_key in _STRATEGY_CACHE:
+            simulator.adj = {u: dict(_STRATEGY_CACHE[cache_key][u]) for u in _STRATEGY_CACHE[cache_key]}
+            return
+
         all_nodes = list(simulator.states.keys())
         # Calculate eigenvector centrality
         _, u, node_to_idx = run_sparse_power_iteration(all_nodes, simulator.adj)
@@ -163,14 +183,26 @@ def centrality_edge_suppression(simulator, event_type, **kwargs):
                         simulator.adj[u_node][v_node] = new_weight
                         if u_node in simulator.adj[v_node]:
                             simulator.adj[v_node][u_node] = new_weight
+        
+        _STRATEGY_CACHE[cache_key] = {u: dict(simulator.adj[u]) for u in simulator.adj}
 
 @register_strategy("greedy_edge_weight_suppression")
 def greedy_edge_weight_suppression(simulator, event_type, **kwargs):
     """
     Greedy edge weight suppression: identifies links with the highest weights
-    and suppresses them by reducing their weights by 90% at setup.
+    and suppresses them at setup.
     """
     if event_type == "setup":
+        cache_key = (
+            "greedy_edge_weight_suppression",
+            id(simulator.original_adj),
+            simulator.suppression_ratio,
+            simulator.suppression_percentage
+        )
+        if cache_key in _STRATEGY_CACHE:
+            simulator.adj = {u: dict(_STRATEGY_CACHE[cache_key][u]) for u in _STRATEGY_CACHE[cache_key]}
+            return
+
         # Collect unique undirected edges with their weights
         edges = []
         seen_edges = set()
@@ -195,6 +227,8 @@ def greedy_edge_weight_suppression(simulator, event_type, **kwargs):
                 simulator.adj[u][v] = suppressed_weight
                 simulator.adj[v][u] = suppressed_weight
 
+        _STRATEGY_CACHE[cache_key] = {u: dict(simulator.adj[u]) for u in simulator.adj}
+
 @register_strategy("reliable_cluster_edge_suppression")
 def reliable_cluster_edge_suppression(simulator, event_type, **kwargs):
     """
@@ -206,6 +240,18 @@ def reliable_cluster_edge_suppression(simulator, event_type, **kwargs):
     4. Identifies all inter-cluster bridging edges and suppresses the top highest-weight links.
     """
     if event_type == "setup":
+        initial_infected_count = sum(1 for state in simulator.states.values() if state == 1)
+        cache_key = (
+            "reliable_cluster_edge_suppression",
+            id(simulator.original_adj),
+            simulator.suppression_ratio,
+            simulator.suppression_percentage,
+            initial_infected_count
+        )
+        if cache_key in _STRATEGY_CACHE:
+            simulator.adj = {u: dict(_STRATEGY_CACHE[cache_key][u]) for u in _STRATEGY_CACHE[cache_key]}
+            return
+
         # Collect all unique edges and their weights
         edges = []
         seen_edges = set()
@@ -229,7 +275,6 @@ def reliable_cluster_edge_suppression(simulator, event_type, **kwargs):
         
         # Optimize k dynamically starting from the number of initial infected nodes (min k) up to max(15, min_k)
         # by maximizing the modularity Q
-        initial_infected_count = sum(1 for state in simulator.states.values() if state == 1)
         min_k = max(2, initial_infected_count)
         max_k = max(15, min_k)
         
@@ -312,6 +357,8 @@ def reliable_cluster_edge_suppression(simulator, event_type, **kwargs):
                 simulator.adj[u][v] = suppressed_weight
                 simulator.adj[v][u] = suppressed_weight
 
+        _STRATEGY_CACHE[cache_key] = {u: dict(simulator.adj[u]) for u in simulator.adj}
+
 @register_strategy("size_constrained_mpf_suppression")
 def size_constrained_mpf_suppression(simulator, event_type, **kwargs):
     """
@@ -322,6 +369,18 @@ def size_constrained_mpf_suppression(simulator, event_type, **kwargs):
     3. Identifies inter-cluster bridging edges and suppresses them.
     """
     if event_type == "setup":
+        initial_infected_count = sum(1 for state in simulator.states.values() if state == 1)
+        cache_key = (
+            "size_constrained_mpf_suppression",
+            id(simulator.original_adj),
+            simulator.suppression_ratio,
+            simulator.suppression_percentage,
+            initial_infected_count
+        )
+        if cache_key in _STRATEGY_CACHE:
+            simulator.adj = {u: dict(_STRATEGY_CACHE[cache_key][u]) for u in _STRATEGY_CACHE[cache_key]}
+            return
+
         edges = []
         seen_edges = set()
         for u in simulator.adj:
@@ -338,7 +397,6 @@ def size_constrained_mpf_suppression(simulator, event_type, **kwargs):
         node_strength = {u: sum(simulator.adj[u].values()) for u in simulator.adj}
         total_strength = sum(node_strength.values())
         
-        initial_infected_count = sum(1 for state in simulator.states.values() if state == 1)
         min_k = max(2, initial_infected_count)
         max_k = max(15, min_k)
         
@@ -422,6 +480,8 @@ def size_constrained_mpf_suppression(simulator, event_type, **kwargs):
                 simulator.adj[u][v] = suppressed_weight
                 simulator.adj[v][u] = suppressed_weight
 
+        _STRATEGY_CACHE[cache_key] = {u: dict(simulator.adj[u]) for u in simulator.adj}
+
 @register_strategy("average_linkage_mpf_suppression")
 def average_linkage_mpf_suppression(simulator, event_type, **kwargs):
     """
@@ -432,6 +492,18 @@ def average_linkage_mpf_suppression(simulator, event_type, **kwargs):
     3. Identifies inter-cluster bridging edges and suppresses them.
     """
     if event_type == "setup":
+        initial_infected_count = sum(1 for state in simulator.states.values() if state == 1)
+        cache_key = (
+            "average_linkage_mpf_suppression",
+            id(simulator.original_adj),
+            simulator.suppression_ratio,
+            simulator.suppression_percentage,
+            initial_infected_count
+        )
+        if cache_key in _STRATEGY_CACHE:
+            simulator.adj = {u: dict(_STRATEGY_CACHE[cache_key][u]) for u in _STRATEGY_CACHE[cache_key]}
+            return
+
         import heapq
         all_nodes = list(simulator.adj.keys())
         n_nodes = len(all_nodes)
@@ -462,7 +534,6 @@ def average_linkage_mpf_suppression(simulator, event_type, **kwargs):
         num_clusters = n_nodes
         partitions = {}
         
-        initial_infected_count = sum(1 for state in simulator.states.values() if state == 1)
         min_k = max(2, initial_infected_count)
         max_k = max(15, min_k)
         
@@ -608,4 +679,6 @@ def average_linkage_mpf_suppression(simulator, event_type, **kwargs):
                 suppressed_weight = weight * reduction_factor
                 simulator.adj[u][v] = suppressed_weight
                 simulator.adj[v][u] = suppressed_weight
+
+        _STRATEGY_CACHE[cache_key] = {u: dict(simulator.adj[u]) for u in simulator.adj}
 
