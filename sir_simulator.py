@@ -129,7 +129,8 @@ def run_single_mc_run(
     suppression_percentage,
     strategy_name,
     steps,
-    initial_infected_nodes
+    initial_infected_nodes,
+    run_seed=None
 ):
     """
     Worker function to run a single independent Monte Carlo SIR simulation.
@@ -154,6 +155,10 @@ def run_single_mc_run(
         sim.strategy_func = None
     else:
         sim.strategy_func = SUPPRESSION_REGISTRY[strategy_name]
+        
+    import random
+    if run_seed is not None:
+        random.seed(run_seed)
         
     sim.reset(initial_infected_nodes=initial_infected_nodes)
     sim.run(steps)
@@ -629,6 +634,8 @@ def run_sir_simulation(
             initial_infected_count = int(raw_outbreak) if raw_outbreak is not None else 3
         
     # Pre-generate initial outbreaks to ensure identical outbreaks per run
+    # Set seed to ensure consistency across separate strategy evaluations
+    random.seed(1002)
     initial_outbreaks = []
     all_node_ids = list(nodes.keys())
     for run_idx in range(runs):
@@ -706,13 +713,15 @@ def run_sir_simulation(
                         suppression_percentage,
                         strategy_name,
                         steps,
-                        initial_outbreaks[run_idx]
+                        initial_outbreaks[run_idx],
+                        1002 + run_idx
                     )
                 )
             for fut in futures:
                 all_histories.append(fut.result())
     else:
         for run_idx in range(runs):
+            random.seed(1002 + run_idx)
             simulator.reset(initial_infected_nodes=initial_outbreaks[run_idx])
             simulator.run(steps)
             all_histories.append(simulator.history)
