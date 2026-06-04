@@ -18,3 +18,7 @@ env/
 # For now, let's track the code and docs.
 *.csv
 *.png
+
+# Allow tracking dataset files
+!Datasets/**/*.csv
+!Datasets/**/*.png

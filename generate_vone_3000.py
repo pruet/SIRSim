@@ -90,8 +90,8 @@ def generate_modular_spatial_network():
         u = random.randint(0, N - 1)
         found = False
         
-        # 95% chance to connect to nearest spatial neighbor
-        if random.random() < 0.95:
+        # 99.5% chance to connect to nearest spatial neighbor
+        if random.random() < 0.995:
             while neighbor_ptrs[u] < len(neighbors_sorted[u]):
                 v = neighbors_sorted[u][neighbor_ptrs[u]]
                 neighbor_ptrs[u] += 1
@@ -104,7 +104,7 @@ def generate_modular_spatial_network():
                     found = True
                     break
         else:
-            # 5% chance to create a random long-range bridge to another cluster
+            # 0.5% chance to create a random long-range bridge to another cluster
             attempts = 0
             u_cluster = node_to_cluster[u]
             while attempts < 100:

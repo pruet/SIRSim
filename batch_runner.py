@@ -97,6 +97,9 @@ def main():
     pct_list = batch_params["suppression_percentage"]
     
     output_csv = config["output_csv"]
+    if not os.path.dirname(output_csv):
+        os.makedirs("Results", exist_ok=True)
+        output_csv = os.path.join("Results", output_csv)
     
     # pre-calculate true network degrees and resolve files
     resolved_networks = []
@@ -110,8 +113,12 @@ def main():
             declared_degree = None
             
         if not os.path.exists(filename):
-            print(f"  [Skip] File '{filename}' does not exist. Skipping.", file=sys.stderr)
-            continue
+            datasets_path = os.path.join("Datasets", filename)
+            if os.path.exists(datasets_path):
+                filename = datasets_path
+            else:
+                print(f"  [Skip] File '{filename}' does not exist. Skipping.", file=sys.stderr)
+                continue
             
         # Programmatically parse to find stats
         num_nodes, num_edges, calc_degree = calculate_network_stats(filename)

@@ -568,8 +568,14 @@ def run_sir_simulation(
     import os
     import sys
     
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Error: File '{file_path}' does not exist.")
+    resolved_path = file_path
+    if not os.path.exists(resolved_path):
+        datasets_path = os.path.join("Datasets", resolved_path)
+        if os.path.exists(datasets_path):
+            resolved_path = datasets_path
+        else:
+            raise FileNotFoundError(f"Error: File '{file_path}' does not exist (checked root and 'Datasets/' folder).")
+    file_path = resolved_path
         
     globals_dict, nodes, adj = parse_netlogo_world(file_path)
     num_nodes = len(nodes)
@@ -848,9 +854,15 @@ def main():
 
     args = parser.parse_args()
 
-    if not os.path.exists(args.file):
-        print(f"Error: File '{args.file}' does not exist.", file=sys.stderr)
-        sys.exit(1)
+    file_path = args.file
+    if not os.path.exists(file_path):
+        datasets_path = os.path.join("Datasets", file_path)
+        if os.path.exists(datasets_path):
+            file_path = datasets_path
+        else:
+            print(f"Error: File '{args.file}' does not exist (checked root and 'Datasets/' folder).", file=sys.stderr)
+            sys.exit(1)
+    args.file = file_path
 
     print("=" * 60)
     print(f"Loading NetLogo world from: {args.file}")
@@ -896,8 +908,15 @@ def main():
     def add_param_suffix(filepath, suffix):
         if not filepath:
             return filepath
-        base, ext = os.path.splitext(filepath)
-        return f"{base}_{suffix}{ext}"
+        dir_name = os.path.dirname(filepath)
+        base_name = os.path.basename(filepath)
+        base, ext = os.path.splitext(base_name)
+        parameterized_name = f"{base}_{suffix}{ext}"
+        if not dir_name:
+            os.makedirs("Results", exist_ok=True)
+            return os.path.join("Results", parameterized_name)
+        else:
+            return os.path.join(dir_name, parameterized_name)
 
     # Resolve strategies to run
     available_strategies = ["baseline"] + list(SUPPRESSION_REGISTRY.keys())
