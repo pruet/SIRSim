@@ -34,3 +34,14 @@ Run with custom parameters:
 ```bash
 python sir_simulator.py vone_300_6_3.csv -n 50 --suppression-ratio 0.20 --suppression-percentage 75.0 -c comparison_summary.csv
 ```
+
+## Modularity & Winning Configurations Memory
+Through systematic sweeps and simulations, we mapped out the topological modularity boundary where community-based strategies (**SC-MPF** and **AL-MPF**) outperform spectral methods (**NetShield**):
+* **High Modularity ($Q > 0.60$)**: Community strategies win across all outbreak sizes ($i = 1$ to $i = 30$). They protect regional block boundaries, preventing cross-pocket reinforcement.
+* **Low Modularity ($Q \approx 0.30$)**: NetShield is globally robust under large outbreaks ($i \ge 30$) because the disease starts inside almost all clusters at tick 0. NetShield's protection of central transport hubs contains the spread. Community strategies only win under single-node outbreaks ($i=1$) where they block local leakage to peripheral nodes before the outbreak hits major hubs.
+
+For detailed analysis, parameters, and charts, refer to:
+* **[all_datasets_properties.md](file:///home/pruet/Development/Oregon/all_datasets_properties.md)**
+* **[winning_datasets_properties.md](file:///home/pruet/Development/Oregon/winning_datasets_properties.md)**
+* **[usairport_i30_containment_analysis.md](file:///home/pruet/Development/Oregon/usairport_i30_containment_analysis.md)**
+
