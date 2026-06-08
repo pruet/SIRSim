@@ -682,3 +682,76 @@ def average_linkage_mpf_suppression(simulator, event_type, **kwargs):
 
         _STRATEGY_CACHE[cache_key] = {u: dict(simulator.adj[u]) for u in simulator.adj}
 
+@register_strategy("louvain_edge_suppression")
+def louvain_edge_suppression(simulator, event_type, **kwargs):
+    """
+    Louvain-based Edge Suppression:
+    1. Reconstructs communities using NetworkX's Louvain community detection algorithm.
+    2. Identifies all inter-community bridging edges and suppresses the top highest-weight links.
+    """
+    if event_type == "setup":
+        initial_infected_count = sum(1 for state in simulator.states.values() if state == 1)
+        cache_key = (
+            "louvain_edge_suppression",
+            id(simulator.original_adj),
+            simulator.suppression_ratio,
+            simulator.suppression_percentage,
+            initial_infected_count
+        )
+        if cache_key in _STRATEGY_CACHE:
+            simulator.adj = {u: dict(_STRATEGY_CACHE[cache_key][u]) for u in _STRATEGY_CACHE[cache_key]}
+            return
+
+        import networkx as nx
+        
+        # Build weighted graph from simulator.adj
+        G = nx.Graph()
+        for u in simulator.adj:
+            for v, w in simulator.adj[u].items():
+                G.add_edge(u, v, weight=w)
+                
+        # Detect communities using weighted Louvain with a fixed seed for reproducible determinism
+        try:
+            communities = nx.community.louvain_communities(G, weight='weight', seed=42)
+        except Exception:
+            try:
+                communities = nx.community.label_propagation_communities(G)
+            except Exception:
+                communities = [{node} for node in simulator.adj]
+            
+        # Map each node to its community index
+        node_to_community = {}
+        for comm_idx, comm in enumerate(communities):
+            for node in comm:
+                node_to_community[node] = comm_idx
+                
+        # Collect all edges that link between different communities
+        inter_community_edges = []
+        seen_edges = set()
+        for u in simulator.adj:
+            for v, w in simulator.adj[u].items():
+                edge_key = tuple(sorted((u, v)))
+                if edge_key not in seen_edges:
+                    seen_edges.add(edge_key)
+                    u_comm = node_to_community.get(u)
+                    v_comm = node_to_community.get(v)
+                    if u_comm is not None and v_comm is not None and u_comm != v_comm:
+                        inter_community_edges.append(((u, v), w))
+                        
+        # Sort bridging edges descending by weight
+        inter_community_edges.sort(key=lambda x: x[1], reverse=True)
+        
+        # Suppress top bridging edges
+        total_edges = sum(len(neighbors) for neighbors in simulator.adj.values()) // 2
+        num_to_suppress = int(total_edges * simulator.suppression_ratio)
+        if num_to_suppress > 0:
+            top_bridging = inter_community_edges[:num_to_suppress]
+            reduction_factor = 1.0 - (simulator.suppression_percentage / 100.0)
+            for (u, v), weight in top_bridging:
+                suppressed_weight = weight * reduction_factor
+                simulator.adj[u][v] = suppressed_weight
+                simulator.adj[v][u] = suppressed_weight
+
+        _STRATEGY_CACHE[cache_key] = {u: dict(simulator.adj[u]) for u in simulator.adj}
+
+

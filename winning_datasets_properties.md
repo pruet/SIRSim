@@ -8,13 +8,13 @@ This document compiles the datasets (both real-world and synthetic) where **Aver
 
 | Dataset File | Category | Nodes ($N$) | Edges ($M$) | Avg. Degree ($<k>$) | Modularity ($Q$) | Winning Strategy | Optimal Parameters |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **`vone_3000.csv`** | Synthetic (Scaled Spatial) | 3,000 | 9,000 | 6.00 | **~0.62** | **AL-MPF** (1st), **SC-MPF** (2nd) | `-n 30 -i 1 -p 0.1 -P 90.0 -v 0.0 -q 0.0` |
-| **`vone_3000.csv` (i=30)** | Synthetic (Scaled Spatial) | 3,000 | 9,000 | 6.00 | **~0.62** | **SC-MPF** (1st), **AL-MPF** (2nd) | `-n 30 -i 30 -s 10.0 -r 10.0 -p 0.1 -P 90.0` |
+| **`vone_3000.csv`** | Synthetic (Scaled Spatial) | 3,000 | 9,000 | 6.00 | **~0.62** | **Louvain** (1st), **AL-MPF** (2nd) | `-n 30 -i 1 -p 0.1 -P 90.0 -v 0.0 -q 0.0` |
+| **`vone_3000.csv` (i=30)** | Synthetic (Scaled Spatial) | 3,000 | 9,000 | 6.00 | **~0.62** | **SC-MPF** (1st), **AL-MPF** (2nd) | `-i 30 -s 10.0 -r 10.0 -p 0.1 -P 90.0` |
 | **`powergrid.csv`** | Real-world (US Power Grid) | 4,941 | 6,594 | 2.67 | **~0.76** | **SC-MPF** (beats NetShield) | `-p 0.1 -P 90.0 -v 0.0 -q 0.0` |
 | **`usairport.csv`** | Real-world (US Airports) | 1,574 | 17,215 | 21.87 | **~0.30** | **SC-MPF** (beats NetShield) | `-n 30 -i 1 -p 0.01 -P 95.0 -r 5.0` |
 | **`usairport.csv` (Leaky I)** | Real-world (US Airports) | 1,574 | 17,215 | 21.87 | **~0.30** | **AL-MPF** (beats NetShield) | `-n 30 -i 1 -s 5.0 -r 2.0 -p 0.03 -P 3.0` |
 | **`usairport.csv` (Leaky II)** | Real-world (US Airports) | 1,574 | 17,215 | 21.87 | **~0.30** | **SC-MPF** (beats NetShield) | `-n 30 -i 1 -s 10.0 -r 15.0 -p 0.3 -P 30.0` |
-| **`vone_300_6_3.csv`** | Synthetic (Benchmark) | 300 | 901 | 6.00 | **~0.60** | **AL-MPF** (1st), **SC-MPF** (2nd) | `-p 0.1 -P 90.0 -v 0.0 -q 0.0` |
+| **`vone_300_6_3.csv`** | Synthetic (Benchmark) | 300 | 901 | 6.00 | **~0.60** | **Louvain** (1st), **AL-MPF** (2nd) | `-p 0.1 -P 90.0 -v 0.0 -q 0.0` |
 | **`perfect_tree_sbm.csv`** | Synthetic (Tree SBM) | 150 | 563 | 7.50 | **~0.65** | **AL-MPF** (1st), **SC-MPF** (2nd) | `-p 0.1 -P 90.0 -v 0.0 -q 0.0` |
 
 ---
@@ -32,9 +32,10 @@ This document compiles the datasets (both real-world and synthetic) where **Aver
   * **Community Structure**: 10 distinct coordinate-based pockets (300 nodes each) with a very low inter-cluster bridge probability (0.5%).
 * **Performance Results**:
   * **Regime 1 (Small Outbreak: $i=1$)**:
-    * **AL-MPF**: **40.35%** peak infection height (Absolute Winner)
-    * **SC-MPF**: **42.32%** peak infection height (2nd place)
-    * **NetShield**: **46.01%** peak infection height (Fails to contain)
+    * **Louvain**: **10.74%** peak infection height (Absolute Winner: 322.30 nodes)
+    * **AL-MPF**: **18.35%** peak infection height (2nd place: 550.37 nodes)
+    * **SC-MPF**: **19.73%** peak infection height (3rd place: 591.80 nodes)
+    * **NetShield**: **28.68%** peak infection height (Fails to contain)
   * **Regime 2 (Large Outbreak: $i=30$)**:
     * **SC-MPF**: **17.30%** peak infection height (Absolute Winner: 518.90 nodes)
     * **AL-MPF**: **17.41%** peak infection height (2nd place: 522.40 nodes)
@@ -72,9 +73,10 @@ This document compiles the datasets (both real-world and synthetic) where **Aver
   * **Modularity ($Q$)**: **0.60**
   * **Community Structure**: 10 clusters of size 30 in a coordinate grid, with thin bridging connections.
 * **Performance Results**:
-  * **AL-MPF**: **42.87%** peak infection height (Absolute Winner)
-  * **SC-MPF**: **47.95%** peak infection height (2nd place)
-  * **NetShield**: **50.13%** peak infection height
+  * **Louvain**: **32.80%** peak infection height (Absolute Winner: 98.40 nodes)
+  * **AL-MPF**: **36.53%** peak infection height (2nd place: 109.60 nodes)
+  * **SC-MPF**: **43.53%** peak infection height (3rd place: 130.60 nodes)
+  * **NetShield**: **48.73%** peak infection height
 * **Containment Rationale**:
   Exactly like the scaled version, AL-MPF and SC-MPF construct perfect firewalls around the 10 small communities, keeping the outbreak localized.
 
