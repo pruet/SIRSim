@@ -10,7 +10,7 @@ This document compiles the datasets (both real-world and synthetic) where **Aver
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
 | **`vone_3000.csv`** | Synthetic (Scaled Spatial) | 3,000 | 9,000 | 6.00 | **~0.62** | **Louvain** (1st), **AL-MPF** (2nd) | `-n 30 -i 1 -p 0.1 -P 90.0 -v 0.0 -q 0.0` |
 | **`vone_3000.csv` (i=30)** | Synthetic (Scaled Spatial) | 3,000 | 9,000 | 6.00 | **~0.62** | **Louvain** (1st), **SC-MPF** (2nd) | `-i 30 -s 10.0 -r 10.0 -p 0.1 -P 90.0` |
-| **`powergrid.csv`** | Real-world (US Power Grid) | 4,941 | 6,594 | 2.67 | **~0.76** | **SC-MPF** (beats NetShield) | `-p 0.1 -P 90.0 -v 0.0 -q 0.0` |
+| **`powergrid.csv`** | Real-world (US Power Grid) | 4,941 | 6,594 | 2.67 | **~0.76** | **Louvain** (1st), **SC-MPF** (2nd) | `-n 30 -i 1 -p 0.1 -P 90.0` |
 | **`usairport.csv`** | Real-world (US Airports) | 1,574 | 17,215 | 21.87 | **~0.30** | **SC-MPF** (beats NetShield) | `-n 30 -i 1 -p 0.01 -P 95.0 -r 5.0` |
 | **`usairport.csv` (Leaky I)** | Real-world (US Airports) | 1,574 | 17,215 | 21.87 | **~0.30** | **AL-MPF** (beats NetShield) | `-n 30 -i 1 -s 5.0 -r 2.0 -p 0.03 -P 3.0` |
 | **`usairport.csv` (Leaky II)** | Real-world (US Airports) | 1,574 | 17,215 | 21.87 | **~0.30** | **SC-MPF** (beats NetShield) | `-n 30 -i 1 -s 10.0 -r 15.0 -p 0.3 -P 30.0` |
@@ -57,9 +57,10 @@ This document compiles the datasets (both real-world and synthetic) where **Aver
   * **Diameter**: Large (high path lengths representing physical transmission lines)
   * **Community Structure**: Distinct, geographically isolated regional power grids connected by thin inter-state high-voltage lines.
 * **Performance Results**:
-  * **SC-MPF**: **6.39%** peak infection height (Beats NetShield)
-  * **NetShield**: **6.69%** peak infection height
-  * *(Note: Greedy Edge Weight is 1st overall at 5.37% due to the graph's extreme sparsity, but SC-MPF is the best of the structural algorithms).*
+  * **Louvain**: **0.27%** peak infection height (Absolute Winner: 13.53 nodes)
+  * **SC-MPF**: **0.73%** peak infection height (2nd place: 36.00 nodes)
+  * **NetShield**: **1.00%** peak infection height (Fails to contain: 49.27 nodes)
+  * *(Note: Greedy Edge Weight is 1st overall at 0.25% due to the graph's extreme sparsity, but Louvain is by far the best structural algorithm).*
 * **Containment Rationale**:
   Because the power grid is high-diameter and extremely sparse, partitioning the network into size-balanced communities and cutting the thin inter-grid lines allows SC-MPF to contain the outbreak locally. NetShield targets high-eigenvector hubs (generators), which leaves the sparse boundary lines unsuppressed, letting the infection leak across states.
 
