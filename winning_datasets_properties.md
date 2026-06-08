@@ -9,7 +9,7 @@ This document compiles the datasets (both real-world and synthetic) where **Aver
 | Dataset File | Category | Nodes ($N$) | Edges ($M$) | Avg. Degree ($<k>$) | Modularity ($Q$) | Winning Strategy | Optimal Parameters |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
 | **`vone_3000.csv`** | Synthetic (Scaled Spatial) | 3,000 | 9,000 | 6.00 | **~0.62** | **Louvain** (1st), **AL-MPF** (2nd) | `-n 30 -i 1 -p 0.1 -P 90.0 -v 0.0 -q 0.0` |
-| **`vone_3000.csv` (i=30)** | Synthetic (Scaled Spatial) | 3,000 | 9,000 | 6.00 | **~0.62** | **SC-MPF** (1st), **AL-MPF** (2nd) | `-i 30 -s 10.0 -r 10.0 -p 0.1 -P 90.0` |
+| **`vone_3000.csv` (i=30)** | Synthetic (Scaled Spatial) | 3,000 | 9,000 | 6.00 | **~0.62** | **Louvain** (1st), **SC-MPF** (2nd) | `-i 30 -s 10.0 -r 10.0 -p 0.1 -P 90.0` |
 | **`powergrid.csv`** | Real-world (US Power Grid) | 4,941 | 6,594 | 2.67 | **~0.76** | **SC-MPF** (beats NetShield) | `-p 0.1 -P 90.0 -v 0.0 -q 0.0` |
 | **`usairport.csv`** | Real-world (US Airports) | 1,574 | 17,215 | 21.87 | **~0.30** | **SC-MPF** (beats NetShield) | `-n 30 -i 1 -p 0.01 -P 95.0 -r 5.0` |
 | **`usairport.csv` (Leaky I)** | Real-world (US Airports) | 1,574 | 17,215 | 21.87 | **~0.30** | **AL-MPF** (beats NetShield) | `-n 30 -i 1 -s 5.0 -r 2.0 -p 0.03 -P 3.0` |
@@ -37,9 +37,10 @@ This document compiles the datasets (both real-world and synthetic) where **Aver
     * **SC-MPF**: **19.73%** peak infection height (3rd place: 591.80 nodes)
     * **NetShield**: **28.68%** peak infection height (Fails to contain)
   * **Regime 2 (Large Outbreak: $i=30$)**:
-    * **SC-MPF**: **17.30%** peak infection height (Absolute Winner: 518.90 nodes)
-    * **AL-MPF**: **17.41%** peak infection height (2nd place: 522.40 nodes)
-    * **NetShield**: **21.10%** peak infection height (Fails to contain: 632.93 nodes)
+    * **Louvain**: **15.22%** peak infection height (Absolute Winner: 456.53 nodes)
+    * **SC-MPF**: **16.20%** peak infection height (2nd place: 486.03 nodes)
+    * **AL-MPF**: **17.08%** peak infection height (3rd place: 512.27 nodes)
+    * **NetShield**: **21.48%** peak infection height (Fails to contain: 644.40 nodes)
 * **Containment Rationale**: 
   * **Small Outbreak ($i=1$)**: The 10% edge suppression budget matches the density of the inter-cluster bridging edges. AL-MPF and SC-MPF identify these boundaries and apply strict 90% firewalls, trapping the infection in its origin pocket. NetShield targets internal hubs instead, allowing the infection to leak across communities.
   * **Large Outbreak ($i=30$)**: Even when the disease starts in all 10 pockets (bypassing localized containment), community strategies distribute their suppression budget evenly across all inter-pocket boundaries. NetShield concentrates its budget in a few dominant blocks, leaving others completely unprotected. This even suppression by AL-MPF/SC-MPF blocks cross-pocket reinforcement, keeping the global peak significantly lower than NetShield's.

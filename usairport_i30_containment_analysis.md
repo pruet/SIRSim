@@ -56,24 +56,22 @@ Even after screening over **750 random seeds** across all recovery rates $r \in 
 
 ## 3. High-Modularity Regime: `vone_3000.csv`
 
-On `vone_3000.csv`, community strategies (**SC-MPF** and **AL-MPF**) significantly outperform NetShield under the same $i=30$ large outbreak constraint.
+On `vone_3000.csv`, community strategies (especially the new **Louvain Edge Suppression** and **SC-MPF**) significantly outperform NetShield under the same $i=30$ large outbreak constraint.
 
 ### Performance Summary Table (30-run MC Verification)
 *Spread chance $s=10.0$, Recovery chance $r=10.0$, Suppression budget $p=0.1$, Suppression percentage $P=90.0$, Seed 1000*
 
 | Strategy | Peak Infected (Qty) | Peak Infected (%) | Peak Tick | Final Susceptible (%) | Run Time (s) |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Size-Constrained MPF (SC-MPF)** | **518.90** | **17.30%** | **128** | **68.74%** | 36.02 |
-| **Average Linkage MPF (AL-MPF)** | 522.40 | 17.41% | 121 | **68.98%** | 29.60 |
-| **Netshield Edge Suppression** | 632.93 | 21.10% | 144 | 65.52% | 33.02 |
-| **Greedy Edge Weight** | 509.97 | 17.00% | 185 | 65.20% | 27.90 |
-| **Baseline (Unsuppressed)** | 866.80 | 28.89% | 148 | 57.55% | 20.25 |
-| **Reliable Cluster Edge** | 851.03 | 28.37% | 130 | 58.12% | 30.05 |
+| **Louvain Edge Suppression** | **456.53** | **15.22%** | **119** | **71.26%** | 20.31 |
+| **Size-Constrained MPF (SC-MPF)** | 486.03 | 16.20% | 130 | 69.37% | 11.67 |
+| **Average Linkage MPF (AL-MPF)** | 512.27 | 17.08% | 133 | 69.70% | 12.79 |
+| **Greedy Edge Weight** | 530.17 | 17.67% | 185 | 65.26% | 12.31 |
+| **Netshield Edge Suppression** | 644.40 | 21.48% | 142 | 65.50% | 20.67 |
+| **Baseline (Unsuppressed)** | 850.00 | 28.33% | 147 | 56.85% | 13.71 |
+| **Reliable Cluster Edge** | 826.53 | 27.55% | 150 | 58.26% | 12.25 |
 
-> [!NOTE]
-> Greedy Edge Weight Suppression achieves a slightly lower peak infected quantity (17.00% vs 17.30%), but it suffers from a significantly higher final infection footprint (only 65.20% final susceptibles vs 68.74% for SC-MPF). Among structural suppression methods, SC-MPF is the clear winner.
+### Infection Curve Plot (vone_3000 with $i=30$, including Louvain)
+![vone_3000 i30 Louvain Curves](file:///home/pruet/.gemini/antigravity-cli/brain/a00d80cf-d787-4726-ba55-47e9a7f4a788/vone_3000_i30_louvain_curves.png)
 
-### Infection Curve Plot (vone_3000 with $i=30$)
-![vone_3000 i30 Curves](file:///home/pruet/.gemini/antigravity-cli/brain/a00d80cf-d787-4726-ba55-47e9a7f4a788/vone_3000_winning_curves_i30.png)
-
-*(The original generated files are [vone_3000_winning_curves_i30.png](file:///home/pruet/.gemini/antigravity-cli/brain/a00d80cf-d787-4726-ba55-47e9a7f4a788/vone_3000_winning_curves_i30.png) and [comparison_vone_3000_winning_i30.csv](file:///home/pruet/.gemini/antigravity-cli/brain/a00d80cf-d787-4726-ba55-47e9a7f4a788/comparison_vone_3000_winning_i30.csv))*
+*(The original generated files are [vone_3000_i30_louvain_curves.png](file:///home/pruet/.gemini/antigravity-cli/brain/a00d80cf-d787-4726-ba55-47e9a7f4a788/vone_3000_i30_louvain_curves.png) and [comparison_vone_3000_i30_louvain.csv](file:///home/pruet/.gemini/antigravity-cli/brain/a00d80cf-d787-4726-ba55-47e9a7f4a788/comparison_vone_3000_i30_louvain.csv))*
